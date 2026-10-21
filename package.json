@@ -1,0 +1,12 @@
+{
+  "name": "toctoc9",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node build.mjs && node tests/rules.cjs && node tests/engine.mjs"
+  },
+  "devDependencies": { "wrangler": "^4.151.3" }
+}
