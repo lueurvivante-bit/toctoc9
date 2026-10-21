@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Toc Toc — LueurVivante</title>
+<meta name="description" content="Toc Toc, le jeu de cartes multijoueur LueurVivante.">
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f2}iframe{display:block;border:0;width:100%;height:100%;height:100dvh}</style>
+</head>
+<body>
+<iframe id="game" title="Toc Toc — jeu de cartes multijoueur" src="https://toctoc9.lueurvivante.workers.dev/" allow="clipboard-write; fullscreen" allowfullscreen></iframe>
+<script>
+// Le jeu reste publié depuis son propre dépôt ; aucun code métier dupliqué ici.
+const game = document.getElementById('game');
+const target = new URL(game.src);
+target.search = location.search;
+target.hash = location.hash;
+if (target.href !== game.src) game.src = target.href;
+</script>
+</body>
+</html>
