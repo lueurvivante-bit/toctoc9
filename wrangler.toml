@@ -1,5 +1,10 @@
 name = "toctoc9"
 main = "src/worker.js"
+workers_dev = true
+routes = [
+  { pattern = "lueurvivante.fr/toctoc", zone_name = "lueurvivante.fr" },
+  { pattern = "lueurvivante.fr/toctoc/", zone_name = "lueurvivante.fr" }
+]
 compatibility_date = "2026-10-01"
 
 [build]

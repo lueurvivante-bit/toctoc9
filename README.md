@@ -44,3 +44,22 @@ python3 tests/e2e_reprise.py # rechargement en pleine partie, départ de l'organ
 ```
 
 Les tests navigateur visent `http://127.0.0.1:8787/` (serveur local lancé).
+
+## Entrée indépendante sur le domaine principal
+
+`public/toctoc/index.html` est une entrée plein écran vers le jeu Workers actuel.
+Les deux routes Cloudflare de `wrangler.toml` servent uniquement `/toctoc` et
+`/toctoc/` ; `/galaxy`, `/account` et les autres chemins restent chez Vercel.
+Le moteur, les salles et leurs identités ne sont ni déplacés ni dupliqués.
+`workers_dev = true` conserve l'origine du jeu utilisée par l'entrée intégrée.
+
+Activation : la zone lueurvivante.fr doit être active chez Cloudflare et le DNS
+racine doit être proxifié (nuage orange), avec chiffrement SSL/TLS Full (strict).
+Le passage du trafic HTTPS par Cloudflare doit être validé explicitement par
+Jonathan avant application. Ne pas changer les MX/SPF ni proxifier les services
+e-mail. Les paramètres DNSSEC doivent correspondre à Cloudflare après bascule.
+
+Tant que ces prérequis ne sont pas confirmés, conserver l'entrée transitoire
+Vercel ; les routes de ce fichier ne prouvent pas leur activation en production.
+Une fois actif, ce routage Cloudflare n'est plus remplacé par les publications de
+la Galaxie. Toute modification du jeu continue de se publier depuis ce dépôt.
