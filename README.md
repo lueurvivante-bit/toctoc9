@@ -63,3 +63,22 @@ Tant que ces prérequis ne sont pas confirmés, conserver l'entrée transitoire
 Vercel ; les routes de ce fichier ne prouvent pas leur activation en production.
 Une fois actif, ce routage Cloudflare n'est plus remplacé par les publications de
 la Galaxie. Toute modification du jeu continue de se publier depuis ce dépôt.
+
+### Table mobile — 22 octobre 2026
+
+La table tient dans la hauteur réellement visible (visualViewport, rotation et
+barres du navigateur incluses). Les cartes et les actions ont des zones séparées ;
+le contenu de la table se réduit si nécessaire, sans défiler. La place de la
+pioche reste réservée avant et après le tirage. Les consignes de pioche sont
+courtes. En paysage court, actions et table passent côte à côte.
+
+La décision de pouvoir conserve son délai serveur de cinq secondes : bouton
+« Utiliser mon pouvoir » animé en transform/opacity, secondes restantes et
+« Passer ». Animation désactivée avec prefers-reduced-motion. Le tirage part du
+paquet vers la pioche personnelle ou une carte dos visible près de l’adversaire ;
+aucune valeur adverse révélée. Les règles et le moteur réseau ne changent pas.
+
+Validation : npm test (règles et moteur, 324 distributions), aperçu navigateur
+360×570 avec six cartes et jusqu’à dix joueurs, pioche et décision de pouvoir.
+La réduction sur écran très chargé diminue la taille des cartes ; les tests
+simulés ne remplacent pas tous les modèles de téléphones physiques.
