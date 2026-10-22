@@ -664,6 +664,7 @@
   .table-content{width:100%;transform-origin:top center;position:absolute;top:0;left:0}
   .play-actions{height:170px;max-height:40%;flex-shrink:0;overflow:auto}
   .drawn-placeholder{visibility:hidden;pointer-events:none}
+  .stack.drawn .card.face{animation:none}
   .power-call{display:flex;align-items:center;justify-content:center;gap:12px;margin:5px 0}
   .power-call button{padding:10px 18px;animation:powerInvite .8s ease-in-out infinite alternate}
   .power-clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--brass-soft);min-width:3ch}
@@ -1944,7 +1945,7 @@ function renderTurn(){
   const topSig=top?(top.rank+top.suit):''; const discJust=(topSig!==_lastTop); _lastTop=topSig;
   const feltMid='<div class="felt-mid">'
     +'<div class="stack"><span class="lbl">Pioche</span><div id="deckPile" data-card-at="deck" class="'+(deckLive?'deck-live':'')+'">'+(deckCnt>0?cardBack():cardEmpty())+'</div><span class="lab">'+deckCnt+'</span></div>'
-    +(drawnShown?'<div class="stack drawn"><span class="lbl">Ta pioche</span><div data-card-at="drawn">'+cardFace(myDrawn)+'</div><span class="lab">'+(hasFigurePower(myDrawn)?'\u2728 pouvoir':'\u00e0 toi de jouer')+'</span></div>':'<div class="stack drawn-placeholder" aria-hidden="true"><span class="lbl">Ta pioche</span>'+cardEmpty()+'<span class="lab">&nbsp;</span></div>')
+    +(drawnShown?'<div class="stack drawn"><span class="lbl">Ta pioche</span><div data-card-at="drawn">'+cardFace(myDrawn)+'</div><span class="lab">'+(hasFigurePower(myDrawn)?'\u2728 pouvoir':'\u00e0 toi de jouer')+'</span></div>':'<div class="stack drawn-placeholder" aria-hidden="true"><span class="lbl">Ta pioche</span><div>'+cardEmpty()+'</div><span class="lab">&nbsp;</span></div>')
     +'<div class="stack"><span class="lbl">D\u00e9fausse</span><div id="discardPile" class="'+(discJust?'just':'')+'">'+(top?cardFace(top):cardEmpty())+'</div><span class="lab">'+(snapMode?'choisis une carte':'\u2726')+'</span></div>'
     +'</div>';
   /* actions */
