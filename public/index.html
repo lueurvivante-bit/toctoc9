@@ -658,6 +658,42 @@
   @media(max-width:419px){.table-ten .pseat .phand{padding:6px 7px 17px;gap:17px 2px}}
   @media(max-width:360px){.pname .next-label{display:none}}
   body.net-wait #screen{pointer-events:none}body.net-wait .play-actions button:not(:disabled){filter:brightness(.88)}
+
+  /* The complete table fits the visual viewport; drawing never adds a row. */
+  .play-surface{position:relative;overflow:hidden;padding:0;flex:1;min-height:0}
+  .table-content{width:100%;transform-origin:top center;position:absolute;top:0;left:0}
+  .play-actions{height:170px;max-height:40%;flex-shrink:0;overflow:auto}
+  .drawn-placeholder{visibility:hidden;pointer-events:none}
+  .power-call{display:flex;align-items:center;justify-content:center;gap:12px;margin:5px 0}
+  .power-call button{padding:10px 18px;animation:powerInvite .8s ease-in-out infinite alternate}
+  .power-clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--brass-soft);min-width:3ch}
+  @keyframes powerInvite{from{opacity:1;transform:translateY(0)}to{opacity:.65;transform:translateY(-2px)}}
+  @media(max-width:699px){
+    #app.game-root{padding:calc(env(safe-area-inset-top,0px) + 38px) 8px max(5px,env(safe-area-inset-bottom));height:var(--play-height,100dvh)}
+    .game-root .rules-recap,.game-root .order-caption,.game-root .play-surface>.table-content>.eyebrow{display:none}
+    .game-root .turn-order{margin:2px 0}.game-root .felt-mid{margin:5px 0;gap:16px}
+    .game-root .hand{row-gap:16px;padding-bottom:15px}.game-root .seatrow{margin-top:4px;padding:4px}
+    .game-root .play-actions{height:160px;max-height:42%;padding:2px 4px}
+    .play-actions .note{font-size:.72rem;line-height:1.2;padding:4px 6px;margin:2px 0}
+    .play-actions .actions{padding-top:3px;gap:3px}.play-actions .actions button{padding:8px}
+    .play-actions .turnbar{padding:4px;margin:2px 0;font-size:.75rem}
+    .game-root .self-identity{padding:3px 7px;margin-bottom:2px}
+    .play-actions .game-controls{margin-top:4px}.play-actions .power-decision{margin-top:2px}
+  }
+  @media(prefers-reduced-motion:reduce){.power-call button{animation:none;outline:2px solid var(--brass)}}
+
+  .pseat{position:relative}.opponent-draw{position:absolute;right:3px;top:22px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .opponent-draw .card.small{width:25px;height:35px}.opponent-draw span{font-size:.5rem;color:var(--brass-soft)}
+  .play-actions .power-call{gap:7px}.play-actions .power-call button{font-size:.85rem;padding:10px}
+  .play-actions .note:has(>.card){display:flex;justify-content:center;align-items:center;gap:8px}
+  .play-actions .note>.card{width:30px;height:42px;font-size:.65rem;padding:3px}
+
+  @media(orientation:landscape) and (max-height:500px){
+    #app.game-root{max-width:none;padding-top:36px}
+    .game-root #screen>.screen:has(.play-surface){flex-direction:row;gap:8px}
+    .game-root .play-actions{width:34%;height:100%;max-height:none;flex:0 0 34%}
+    .game-root .play-surface{height:100%}
+  }
 </style></head>
 <body>
 <div class="status" id="status"><span class="d"></span><span id="statusText">connexion…</span></div>
@@ -991,6 +1027,15 @@ function patchRenderNode(current,next){
   }
   for(const child of old)if(!used.has(child)&&child.parentNode===current)current.removeChild(child);
 }
+function fitPlayingTable(){
+  const surface=document.querySelector('.play-surface'),content=surface?.querySelector('.table-content');
+  if(!content)return;
+  const scale=Math.min(1,surface.clientHeight/Math.max(1,content.scrollHeight),surface.clientWidth/Math.max(1,content.scrollWidth));
+  content.style.transform='scale('+scale+')';
+}
+function updatePlayViewport(){document.documentElement.style.setProperty('--play-height',(window.visualViewport?.height||window.innerHeight)+'px');requestAnimationFrame(fitPlayingTable);}
+window.addEventListener?.('resize',updatePlayViewport);window.visualViewport?.addEventListener('resize',updatePlayViewport);
+const playingTableObserver=typeof ResizeObserver==='undefined'?null:new ResizeObserver(fitPlayingTable);
 function render(h,anim){
   if(h===renderedMarkup&&screen.firstElementChild)return;
   const started=performance.now();
@@ -1008,7 +1053,8 @@ function render(h,anim){
   else screen.innerHTML=markup;
   const qb=document.getElementById('leaveGameBtn');if(qb)qb.style.display=inGame?'flex':'none';
   bind();scrollPositions.forEach(([selector,top])=>{const el=document.querySelector(selector);if(el&&el.scrollTop!==top)el.scrollTop=top;});
-  animateHandLayout();animateCardArrivals();
+  requestAnimationFrame(()=>{fitPlayingTable();animateHandLayout();animateCardArrivals();});
+  playingTableObserver?.disconnect();const surface=document.querySelector('.play-surface');if(surface){playingTableObserver?.observe(surface);playingTableObserver?.observe(surface.firstElementChild);updatePlayViewport();}
   screen.dataset.renderMs=(performance.now()-started).toFixed(1);
 }
 let _renderPending=false, _lastTop='', _praiseTimer=null;
@@ -1093,7 +1139,8 @@ function initFx(){ const b=document.createElement('button'); b.id='muteBtn'; b.c
   setInterval(updateCountdown, 350);
   const resume=function(){ const a=ac(); if(a&&a.state==='suspended') a.resume(); document.removeEventListener('pointerdown',resume); };
   document.addEventListener('pointerdown',resume); }
-function updateCountdown(){ const decision=document.getElementById('powerDecision');
+function updateCountdown(){ const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
+ const decision=document.getElementById('powerDecision');
   if(decision && gstate && gstate.pendingFigure){const f=gstate.pendingFigure;decision.textContent=f.accepted?'Pouvoir choisi':('Utiliser ou passer · '+Math.max(0,Math.ceil(((f.decisionDeadline||Date.now()+5000)-Date.now())/1000))+' s');}
   const el=document.getElementById('tdc'); if(!el) return;
   if(gstate && gstate.turnDeadline){ const s=Math.max(0,Math.ceil((gstate.turnDeadline-Date.now())/1000));
@@ -1797,7 +1844,7 @@ function renderPeek(){
   const done=(gstate.peekDone&&gstate.peekDone[uid]);
   const hasPeeked=peekProgress().length>=curPeek();
   const tablePreview=gstate.order.length>=5?'<div class="opp-table">'+gstate.order.filter(u=>u!==uid).map(u=>'<div class="pseat" style="'+playerStyle(u)+'"><div class="pname">'+avatarOf(u)+' '+nameOf(u)+'</div><div class="phand" style="--hand-count:'+Math.min(6,gstate.handSize||4)+'">'+Array.from({length:gstate.handSize||4},(_,i)=>'<div class="pslot" style="'+fanStyle(i,gstate.handSize||4)+'">'+cardBack(true)+'</div>').join('')+'</div></div>').join('')+'</div>':'';
-  render('<div class="play-surface"><div class="eyebrow center">manche '+gstate.round+' \u00b7 m\u00e9morise</div>'
+  render('<div class="play-surface"><div class="table-content"><div class="eyebrow center">manche '+gstate.round+' \u00b7 m\u00e9morise</div>'
     +tablePreview
     +'<h2 style="text-align:center">'+(curPeek()?'Mémorise '+curPeek()+' carte'+(curPeek()>1?'s':''):'Départ sans mémorisation')+'</h2>'
     +'<p class="sub" style="text-align:center">'+(curPeek()?'Tu as '+(gstate.handSize||4)+' cartes. Choisis '+curPeek()+' carte'+(curPeek()>1?'s différentes, visibles':' différente, visible')+' trois secondes chacune.':'Tu as '+(gstate.handSize||4)+' cartes cachées. Aucune à regarder : confirme pour commencer.')+'</p>'
@@ -1871,7 +1918,7 @@ function renderTurn(){
       }
     }
     const drew=(mv && mv.type==='draw' && mv.who===u && u===cur && u!==uid)?' <span class="drew">a pioch\u00e9\u2026</span>':'';
-    opp+='<div class="pseat'+(u===cur?' active':'')+'" style="'+playerStyle(u)+'"><div class="pname">'+(u===cur?'\u279c ':'')+'<span class="seat-order">'+(gstate.order.indexOf(u)+1)+'</span> '+avatarOf(u)+' '+nameOf(u)+(u===nextPlayer?' <span class="next-label">suivant</span>':'')+drew+'</div><div class="phand" style="--hand-count:'+Math.max(1,Math.min(6,occupied))+'">'+(cc||'<span class="muted">\u2014</span>')+'</div></div>'; });
+    opp+='<div class="pseat'+(u===cur?' active':'')+'" style="'+playerStyle(u)+'"><div class="pname">'+(u===cur?'\u279c ':'')+'<span class="seat-order">'+(gstate.order.indexOf(u)+1)+'</span> '+avatarOf(u)+' '+nameOf(u)+(u===nextPlayer?' <span class="next-label">suivant</span>':'')+drew+'</div><div class="phand" style="--hand-count:'+Math.max(1,Math.min(6,occupied))+'">'+(cc||'<span class="muted">\u2014</span>')+'</div><div class="opponent-draw '+(drew?'':'drawn-placeholder')+'" data-card-at="'+u+':drawn">'+cardBack(true)+'<span>Pioche</span></div></div>'; });
   opp='<div class="opp-table">'+opp+'</div>';
   const top=gstate.discardTop;
   /* Stable card keys preserve identity while visible positions close gaps. */
@@ -1897,7 +1944,7 @@ function renderTurn(){
   const topSig=top?(top.rank+top.suit):''; const discJust=(topSig!==_lastTop); _lastTop=topSig;
   const feltMid='<div class="felt-mid">'
     +'<div class="stack"><span class="lbl">Pioche</span><div id="deckPile" data-card-at="deck" class="'+(deckLive?'deck-live':'')+'">'+(deckCnt>0?cardBack():cardEmpty())+'</div><span class="lab">'+deckCnt+'</span></div>'
-    +(drawnShown?'<div class="stack drawn"><span class="lbl">Ta pioche</span><div data-card-at="drawn">'+cardFace(myDrawn)+'</div><span class="lab">'+(hasFigurePower(myDrawn)?'\u2728 pouvoir':'\u00e0 toi de jouer')+'</span></div>':'')
+    +(drawnShown?'<div class="stack drawn"><span class="lbl">Ta pioche</span><div data-card-at="drawn">'+cardFace(myDrawn)+'</div><span class="lab">'+(hasFigurePower(myDrawn)?'\u2728 pouvoir':'\u00e0 toi de jouer')+'</span></div>':'<div class="stack drawn-placeholder" aria-hidden="true"><span class="lbl">Ta pioche</span>'+cardEmpty()+'<span class="lab">&nbsp;</span></div>')
     +'<div class="stack"><span class="lbl">D\u00e9fausse</span><div id="discardPile" class="'+(discJust?'just':'')+'">'+(top?cardFace(top):cardEmpty())+'</div><span class="lab">'+(snapMode?'choisis une carte':'\u2726')+'</span></div>'
     +'</div>';
   /* actions */
@@ -1908,7 +1955,7 @@ function renderTurn(){
     else act='<div class="note" style="text-align:center">'+(fig.rank==='Q'?'Dame : \u00e9change \u00e0 l\u0027aveugle.':'Roi : \u00e9change et vois la carte re\u00e7ue.')+' '+exchangePrompt(figSel)+'</div><div class="actions"><button class="btn-ghost" id="figSkip">Passer</button></div>';
   }
   else if(fig){ act='<div class="note" style="text-align:center">Patiente\u2026</div>'; }
-  else if(myTurn && myDrawn){ act='<div class="note" style="text-align:center">Ta carte est au centre. <b>D\u00e9fausse-la</b>'+(hasFigurePower(myDrawn)?' pour activer son pouvoir ('+(myDrawn.rank==='J'?'Valet':myDrawn.rank==='Q'?'Dame':'Roi')+'),':',')+' ou <b>touche une de tes cartes</b> pour l\u0027\u00e9changer.</div><div class="actions"><button class="btn-ghost" id="discard">D\u00e9fausser le '+myDrawn.rank+'</button></div>'; }
+  else if(myTurn && myDrawn){ act='<div class="note center">Échange avec une de tes cartes ou défausse.</div><div class="actions"><button class="btn-ghost" id="discard">Défausser le '+myDrawn.rank+'</button></div>'; }
 
   if(iPlay&&!fig){
     const blocked=!!gstate.takeBlocked?.[uid];
@@ -1922,17 +1969,17 @@ function renderTurn(){
   }
   const takeResult=gstate.takeResult;
   if(takeResult&&Date.now()-takeResult.ts<8000)act+='<div class="note" role="status">'+nameOf(takeResult.by)+(takeResult.success?' a réussi sa prise : +2 cartes pour '+nameOf(takeResult.opponent)+'.':' a raté sa prise : +1 carte, prochain tour sauté et Prendre chez les autres bloqué pour la manche.')+'</div>';
-  if(fig && fig.by===uid && fig.step==='choose') act='<div class="power-decision" id="powerDecision" role="status">'+(fig.accepted?'Pouvoir choisi':'Utiliser ou passer · '+Math.max(0,Math.ceil(((fig.decisionDeadline||Date.now()+5000)-Date.now())/1000))+' s')+'</div>'+act;
+  if(fig && fig.by===uid && fig.step==='choose') act=fig.accepted?act:'<div class="power-call"><button class="btn-primary" id="figAccept">Utiliser mon pouvoir</button><span class="power-clock" id="powerClock" aria-label="Temps restant">'+Math.max(0,Math.ceil(((fig.decisionDeadline||Date.now())-Date.now())/1000))+' s</span><button class="btn-ghost" id="figSkip">Passer</button></div><p class="note center">Après le décompte, le pouvoir est passé.</p>';
 
   /* ---- L'APPEL render() QUI MANQUAIT : sans lui, l'écran de jeu était vide ---- */
-  render('<div class="play-surface"><div class="eyebrow center">manche '+gstate.round+'</div>'
+  render('<div class="play-surface"><div class="table-content"><div class="eyebrow center">manche '+gstate.round+'</div>'
     +(gstate.order.length>=5?'':scoresBar())
     +turnOrderBar()
     +opp
     +feltMid
     +'<div class="seatrow'+(myTurn?' active':'')+'" style="'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+(myCards||'<span class="muted">tu arbitres</span>')+'</div></div>'
     +(arrival?'<div class="note arrival-note" role="status">'+(arrival.type==='penalty'?'Pénalité : +'+(arrival.slots?.length||1)+' carte(s)':'Carte reçue')+' en <b>position '+(arrival.slots||[arrival.slot]).map(slot=>visualCardPosition(uid,slot)).join(' et ')+'</b>.</div>':'')
-    +'</div><div class="play-actions">'+bar+act+configDetails(gstate,true)+'</div>', false);
+    +'</div></div><div class="play-actions">'+bar+act+configDetails(gstate,true)+'</div>', false);
 }
 function renderReveal(){
   const rv=gstate.reveal||{};
@@ -2128,6 +2175,23 @@ function animateCardArrivals(){
   if(!mv || !inGame || gstate.phase!=='turn' || Date.now()-mv.ts>4000)return;
   const key=code+':'+gstate.round+':'+mv.ts+':'+mv.type;
   if(animatedArrival===key)return;
+  if(mv.type==='draw'){
+    const from=document.querySelector('[data-card-at="deck"] .card');
+    const destination=[...document.querySelectorAll('[data-card-at]')].find(el=>el.dataset.cardAt===(mv.who===uid?'drawn':mv.who+':drawn'));
+    const target=destination?.querySelector('.card');
+    if(!from||!target)return;
+    animatedArrival=key;
+    const a=from.getBoundingClientRect(),b=target.getBoundingClientRect();
+    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+      const ghost=from.cloneNode(true);ghost.setAttribute('aria-hidden','true');
+      Object.assign(ghost.style,{position:'fixed',left:a.left+'px',top:a.top+'px',width:a.width+'px',height:a.height+'px',margin:'0',zIndex:'10000',pointerEvents:'none'});
+      document.body.appendChild(ghost);
+      const flight=ghost.animate([{transform:'translate(0,0)',opacity:1},{transform:'translate('+(b.left-a.left)+'px,'+(b.top-a.top)+'px) scale('+(b.width/a.width)+')',opacity:1}],{duration:480,easing:'cubic-bezier(.22,.8,.25,1)',fill:'forwards'});
+      flight.onfinish=()=>ghost.remove();flight.oncancel=()=>ghost.remove();
+      target.animate([{outline:'2px solid var(--brass)',outlineOffset:'4px'},{outline:'2px solid transparent',outlineOffset:'0px'}],{duration:900});
+    }
+    return;
+  }
   const paths=[];
   if(mv.type==='penalty')for(const slot of mv.slots||[mv.slot])paths.push(['deck',mv.who+':'+slot]);
   if(mv.type==='swap')paths.push([mv.who===uid?'drawn':'deck',mv.who+':'+mv.slot]);
@@ -2207,6 +2271,7 @@ function bind(){
   const di=document.getElementById('discard'); if(di) di.onclick=function(){ playSfx('discard'); postAction({type:'discard'}); };
   const tc=document.getElementById('toc'); if(tc) tc.onclick=function(){ playSfx('toc'); buzz([18,40,18]); postAction({type:'toc'}); };
   const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode; playSfx('flip'); renderGame(); };
+  const fa=document.getElementById('figAccept'); if(fa) fa.onclick=function(){fa.disabled=true;postAction({type:'fig_accept'});};
   const fs=document.getElementById('figSkip'); if(fs) fs.onclick=function(){ figSel=null; postAction({type:'fig_skip'}); };
   const fd=document.getElementById('figDone'); if(fd) fd.onclick=function(){ postAction({type:'fig_done'}); };
   const nr=document.getElementById('newround'); if(nr) nr.onclick=function(){ postAction({type:'newround'}); };
