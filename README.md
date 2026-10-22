@@ -82,3 +82,18 @@ Validation : npm test (règles et moteur, 324 distributions), aperçu navigateur
 360×570 avec six cartes et jusqu’à dix joueurs, pioche et décision de pouvoir.
 La réduction sur écran très chargé diminue la taille des cartes ; les tests
 simulés ne remplacent pas tous les modèles de téléphones physiques.
+
+### Correctif mémorisation — 22 octobre 2026
+
+Le premier ajustement mobile avait laissé le conteneur table-content ouvert
+dans renderPeek : les actions étaient imbriquées dans la surface ajustée et
+pouvaient recouvrir le titre. Les actions sont maintenant sœurs de la surface,
+comme pendant la partie. La marge haute réserve les commandes fixes.
+
+Régression automatisée dans tests/rules.cjs : génération des écrans mémorisation
+et partie pour 2/10 joueurs et quotas 0/1/6, vérification de la fermeture des
+conteneurs avant les actions. Audit navigateur des huit écrans (accueil, création,
+réglages, rejoindre, salle, mémorisation, résultat, fin), puis sélection réelle
+d’une carte et contrôle du bouton actif/non recouvert à 360×570, dix joueurs.
+Les réglages restent défilants dans leur panneau ; les éléments des sections
+repliées ne sont pas des commandes visibles. Aucun changement de règles.

@@ -670,7 +670,7 @@
   .power-clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--brass-soft);min-width:3ch}
   @keyframes powerInvite{from{opacity:1;transform:translateY(0)}to{opacity:.65;transform:translateY(-2px)}}
   @media(max-width:699px){
-    #app.game-root{padding:calc(env(safe-area-inset-top,0px) + 38px) 8px max(5px,env(safe-area-inset-bottom));height:var(--play-height,100dvh)}
+    #app.game-root{padding:calc(env(safe-area-inset-top,0px) + 56px) 8px max(5px,env(safe-area-inset-bottom));height:var(--play-height,100dvh)}
     .game-root .rules-recap,.game-root .order-caption,.game-root .play-surface>.table-content>.eyebrow{display:none}
     .game-root .turn-order{margin:2px 0}.game-root .felt-mid{margin:5px 0;gap:16px}
     .game-root .hand{row-gap:16px;padding-bottom:15px}.game-root .seatrow{margin-top:4px;padding:4px}
@@ -690,7 +690,7 @@
   .play-actions .note>.card{width:30px;height:42px;font-size:.65rem;padding:3px}
 
   @media(orientation:landscape) and (max-height:500px){
-    #app.game-root{max-width:none;padding-top:36px}
+    #app.game-root{max-width:none;padding-top:56px}
     .game-root #screen>.screen:has(.play-surface){flex-direction:row;gap:8px}
     .game-root .play-actions{width:34%;height:100%;max-height:none;flex:0 0 34%}
     .game-root .play-surface{height:100%}
@@ -1851,7 +1851,7 @@ function renderPeek(){
     +'<p class="sub" style="text-align:center">'+(curPeek()?'Tu as '+(gstate.handSize||4)+' cartes. Choisis '+curPeek()+' carte'+(curPeek()>1?'s différentes, visibles':' différente, visible')+' trois secondes chacune.':'Tu as '+(gstate.handSize||4)+' cartes cachées. Aucune à regarder : confirme pour commencer.')+'</p>'
     +'<div class="seatrow" style="margin-top:18px;'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+slots+'</div></div>'
     +configDetails(gstate,true)
-    +'</div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
+    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
 }
 const PLAYER_PALETTE=[
   ['#e8bf50','#fff0b0'],['#579ded','#b7daff'],['#42cbbb','#a4f3e8'],['#8056bf','#e0c5ff'],['#df6669','#ffc7c9'],

@@ -215,4 +215,24 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
  })()`,sandbox);
  const publicState=[...writes].reverse().find(x=>x?.phase==='peek');assert.equal(publicState.theme,'midnight');assert.equal(publicState.botLevel,'difficile');assert.equal(publicState.turnSecs,17);
  console.log('Réglages : chrono 5–20 s/default 10, difficulté indépendante et cinq thèmes publiés correctement OK');
+ // Regression: action controls must be siblings of the fitting surface, never inside it.
+ vm.runInContext(`
+   var layoutMarkup='';render=function(h){layoutMarkup=h;};
+   uid='layout';code='layout';inGame=true;isHost=false;myDrawn=null;myLook=null;
+   for(const count of [2,10])for(const quota of [0,1,6]){
+     myHand=Array.from({length:6},()=>({rank:'3',suit:'♠'}));
+     gstate={phase:'peek',peek:quota,peekId:'layout',round:1,handSize:6,order:[uid,...Array.from({length:count-1},(_,i)=>'bot_'+i)],scores:{},hands:{},names:{},turnIndex:0,turnNumber:8};
+     gstate.order.forEach(u=>{gstate.scores[u]=0;gstate.hands[u]={count:6,slots:[1,1,1,1,1,1]};gstate.names[u]=u;});
+     for(const phase of ['peek','turn']){
+       gstate.phase=phase;layoutMarkup='';if(phase==='peek')renderPeek();else renderTurn();
+       const boundary=layoutMarkup.indexOf('<div class="play-actions">');
+       if(boundary<0)throw Error('missing action area '+phase);
+       const prefix=layoutMarkup.slice(0,boundary);
+       const depth=(prefix.match(/<div(?: | >|>)/g)||[]).length-(prefix.split('</div>').length-1);
+       if(depth!==0)throw Error('action area nested in table: '+phase+' depth '+depth);
+     }
+   }
+ `,sandbox);
+ console.log('Mise en page : actions hors de la table, mémorisation et partie, 2/10 joueurs et quotas 0/1/6 OK');
+
 })().catch(e=>{console.error(e);process.exitCode=1});
