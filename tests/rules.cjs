@@ -51,7 +51,8 @@ if(arrivalFor('me').slot!==3)throw Error('incoming opponent swap');
 let published;pushState=x=>published=x;writeHand=()=>{};drawCard=()=>({rank:'9',suit:'♥'});
 gstate={phase:'turn'};G={hands:{me:[{rank:'2',suit:'♠'},null]},discard:[{rank:'3',suit:'♠'}],snapSkipTurn:false};
 doSnap('me',0);if(published.move.slot!==1||published.move.type!=='penalty')throw Error('refilled penalty slot');
-G.hands.me=[{rank:'2',suit:'♠'}];doSnap('me',0);if(published.move.slot!==1||G.hands.me.length!==2)throw Error('appended penalty slot');
+G.hands.me=[{rank:'2',suit:'♠'}];G.snapFailed={};doSnap('me',0); // scénario indépendant : garde anti-doublon remise à zéro
+if(published.move.slot!==1||G.hands.me.length!==2)throw Error('appended penalty slot');
 `,sandbox);
 console.log('Roi/Dame : 4 ordres vérifiés ; pénalité : case vide et ajout à droite vérifiés');
 vm.runInContext(`
@@ -121,6 +122,31 @@ G.turnIndex=2;advanceTurn();if(G.order[G.turnIndex]!=='other'||G.skip.me!==false
 G.discard.push({rank:'K',suit:'♠'});doSnap('other',0);if(G.protectedCards.other[0]||G.hands.other[0]!==null)throw Error('owner may discard protected card');
 `,sandbox);
 console.log('Prendre : réussite +2, récompense, erreur +1/interdiction/tour sauté, protection et CLAC propriétaire OK');
+vm.runInContext(`
+// Prise visée : la carte de défausse affichée accompagne snap/take.
+let notices=[],pushed=[];stateRef={update:v=>notices.push(v)};pushState=x=>pushed.push(x);
+const top={rank:'6',suit:'♥'},stale={rank:'J',suit:'♠'};
+function snapFixture(){notices=[];pushed=[];gstate={phase:'turn'};G={order:['me','other'],turnIndex:1,turnNumber:4,hands:{me:[{rank:'6',suit:'♠'},{rank:'2',suit:'♣'},{rank:'3',suit:'♦'}],other:[{rank:'6',suit:'♣'},{rank:'9',suit:'♣'}]},discard:[{rank:'4',suit:'♠'},{...top}],deck:[{rank:'8',suit:'♣'},{rank:'7',suit:'♣'},{rank:'5',suit:'♣'}],_fig:null,skip:{},snapSkipTurn:true};}
+snapFixture();doSnap('me',0,stale);
+if(G.hands.me.length!==3||!G.hands.me[0]||pushed.length||G.skip.me||notices.at(-1)?.takeNotice?.kind!=='stale'||notices.at(-1).takeNotice.by!=='me')throw Error('stale snap penalised');
+snapFixture();doSnap('me',1,top);
+if(G.hands.me.length!==4||pushed.at(-1)?.move?.type!=='penalty'||!G.skip.me)throw Error('matching target, wrong value: penalty expected');
+doSnap('me',1,top);doSnap('me',1);
+if(G.hands.me.length!==4||notices.at(-1)?.takeNotice?.kind!=='repeat')throw Error('double tap penalised twice');
+doSnap('me',2,top);if(G.hands.me.length!==5)throw Error('different wrong card must still be penalised');
+snapFixture();doSnap('me',0,top);
+if(G.hands.me[0]!==null||G.discard.at(-1).rank!=='6'||G.hands.me.length!==3)throw Error('matching target, right value: success expected');
+snapFixture();doSnap('me',0);if(G.hands.me[0]!==null)throw Error('legacy snap without target');
+snapFixture();G.discard.push({rank:'J',suit:'♠'});doSnap('me',0);if(G.hands.me.length!==4)throw Error('legacy snap judged against current top');
+snapFixture();doTake('me','other',0,stale);
+if(G.hands.other[0]?.rank!=='6'||G.takeBlocked?.me||G.hands.me.length!==3||pushed.length||notices.at(-1)?.takeNotice?.kind!=='stale')throw Error('stale take penalised');
+snapFixture();doTake('me','other',1,top);
+if(!G.takeBlocked.me||G.hands.me.length!==4)throw Error('matching take, wrong value: penalty expected');
+doTake('me','other',1,top);if(G.hands.me.length!==4)throw Error('double take penalised twice');
+snapFixture();doTake('me','other',0,top);
+if(G.hands.other.filter(Boolean).length!==3||G.discard.at(-1).rank!=='6'||G.discard.at(-1).suit!=='♣'||G.takeBlocked?.me)throw Error('matching take, right value: success expected');
+`,sandbox);
+console.log('Prise visée : défausse changée sans pénalité, mauvaise valeur pénalisée, bonne valeur réussie, double appui pénalisé une seule fois, ancien format inchangé OK');
 const storage=new Map();sandbox.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
 vm.runInContext(`
 code='same-room';uid='me';gstate={peekId:'deal-a',round:1,peek:1,order:['me'],peekDone:{}};

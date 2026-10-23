@@ -20,7 +20,19 @@ if(!store.get('games/ABCD/private/h/drawn'))throw Error('pioche');
 rt.action({type:'discard',by:'h',ts:Date.now()});
 await new Promise(r=>setTimeout(r,10));
 
+// Prise visée via le moteur serveur réel : le champ « top » traverse processAction.
+if(store.get('games/ABCD/state/pendingFigure')){rt.action({type:'fig_skip',by:'h',ts:Date.now()});await new Promise(r=>setTimeout(r,10));}
+const countOf=()=>store.get('games/ABCD/hands/h').filter(Boolean).length;
+const top=store.get('games/ABCD/state/discardTop'),n0=countOf();
+rt.action({type:'snap',by:'h',slot:0,top:{rank:top.rank==='A'?'2':'A',suit:top.suit},ts:Date.now()});
+await new Promise(r=>setTimeout(r,10));
+if(countOf()!==n0||store.get('games/ABCD/state/takeNotice')?.kind!=='stale')throw Error('prise périmée pénalisée');
+const wrong=store.get('games/ABCD/hands/h').findIndex(c=>c&&c.rank!==top.rank);
+rt.action({type:'snap',by:'h',slot:wrong,top:{rank:top.rank,suit:top.suit},ts:Date.now()});
+rt.action({type:'snap',by:'h',slot:wrong,top:{rank:top.rank,suit:top.suit},ts:Date.now()});
+await new Promise(r=>setTimeout(r,10));
+if(countOf()!==n0+1||store.get('games/ABCD/state/takeNotice')?.kind!=='repeat')throw Error('double appui : une seule pénalité attendue');
 const st=JSON.stringify(store.get('games/ABCD/state'));
 if(st.includes('"deck"')||st.includes('"_drawn"'))throw Error('fuite dans l’état public');
-console.log('Moteur serveur : lancement, mémorisation, pioche, défausse, aucune carte cachée dans l’état public OK');
+console.log('Moteur serveur : lancement, mémorisation, pioche, défausse, prise visée (périmée/double appui), aucune carte cachée dans l’état public OK');
 process.exit(0);
