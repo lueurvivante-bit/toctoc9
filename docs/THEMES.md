@@ -24,3 +24,9 @@ Les décors sont des dégradés CSS statiques, sans canvas, image distante ou an
 `npm test` passe. Le test moteur lance une table pour chaque ambiance principale et vérifie la transmission du thème, la phase, les joueurs et une distribution de quatre cartes inchangée. La normalisation continue d’accepter toutes les ambiances anciennes.
 
 Navigateur local : chaque nouvelle ambiance prévisualisée ; sélecteur vérifié à 375×720, sans débordement horizontal et avec le bouton Créer visible. Table Galaxie créée avec un bot, mémorisation confirmée et pioche exécutée ; cartes de soi/adversaire et actions visibles sur ce format. Il s’agit d’un format mobile émulé, pas d’un appareil physique. Capture locale : `/tmp/toctoc-galaxy-mobile.png`.
+
+## Publication
+
+PR #20 intégrée ; révision applicative `15fd934`. Version Cloudflare publiée : `dc0f56e0-774a-49d6-a407-281268d3c25f`. Contrôle HTTP 200 et HTML identique aux sources ; sélecteur d’ambiance testé en ligne avec Galaxie choisie. Capture locale `/tmp/toctoc-ambiances-publiees.png`. Les contrôles mobiles et la pioche détaillés ci-dessus ont été réalisés sur le serveur local, pas sur un téléphone physique.
+
+Fichiers exacts de cette livraison : `.gitattributes` (PDF déclaré binaire), `docs/BRAND.md`, `docs/THEMES.md`, `docs/brand/LUEURVIVANTE_CHARTE.pdf`, `public/index.html`, `tests/engine.mjs`, `tests/rules.cjs`. Aucun changement du réseau, du routage ou des règles de points. Le PDF téléchargeable remis à Jonathan est identique à celui du dépôt.
