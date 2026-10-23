@@ -96,3 +96,4 @@ lueurvivante.fr/toctoc/ dans Safari, rejoindre une partie, fermer Safari de forc
 joueur, sans repasser par l’accueil. Refaire depuis l’app Messages (lien ouvert puis
 retour) et depuis Chrome iOS. Vérifier aussi que wss://lueurvivante.fr/toctoc/ws
 s’ouvre (onglet Réseau) et que lueurvivante.fr/toctoc (sans barre) redirige.
+
