@@ -8,6 +8,8 @@ export const PREFIX = '/toctoc';
 export function route(pathname) {
   if (pathname === PREFIX) return { redirect: PREFIX + '/' };
   if (pathname.startsWith(PREFIX + '/')) return { path: pathname.slice(PREFIX.length), prefixed: true };
+  // Le joker Cloudflare inclut aussi /toctoc?profil= ; les chemins voisins restent à l'origine.
+  if (pathname.startsWith(PREFIX)) return { origin: true };
   return { path: pathname, prefixed: false };
 }
 
