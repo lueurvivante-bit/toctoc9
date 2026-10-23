@@ -497,10 +497,23 @@
   body[data-theme="amethyst"]{--felt:#4b2e66;--felt-deep:#30203f;--felt-edge:#1e162c;--brass:#b47aa9;--brass-soft:#edbedf;--muted:#b5a0c5;--good:#91cbb8}
   body[data-theme="burgundy"]{--felt:#652f3e;--felt-deep:#40232e;--felt-edge:#29161f;--brass:#c69a69;--brass-soft:#efd0a3;--muted:#c0a5a7;--good:#9fc8ae}
   body[data-theme="amber"]{--felt:#59432c;--felt-deep:#352c22;--felt-edge:#211b16;--brass:#ba8c42;--brass-soft:#ecd08c;--muted:#b4ad95;--good:#9abe89}
+  /* Ambiances signature : motifs statiques, jamais superposés aux cartes. */
+  body[data-theme="signature"]{--felt:#211a12;--felt-deep:#100e0a;--felt-edge:#050505;--paper:#ffffff;--paper-shade:#f3ead7;--brass:#f2930b;--brass-soft:#fbdf5e;--muted:#bbb4a9;--good:#7bc795}
+  body[data-theme="galaxy"]{--felt:#191b31;--felt-deep:#0c0e1b;--felt-edge:#05060c;--paper:#ffffff;--paper-shade:#eeeef5;--brass:#f2930b;--brass-soft:#fbdf5e;--muted:#b4b8cf;--good:#88cdb0}
+  body[data-theme="impulse"]{--felt:#242424;--felt-deep:#111111;--felt-edge:#050505;--paper:#ffffff;--paper-shade:#ededed;--brass:#f2930b;--brass-soft:#fdc50a;--muted:#bbbbbb;--good:#7bc795}
+  body[data-theme="signature"]:not(.home-mode){background:radial-gradient(ellipse at 50% 0%,#f2930b18,transparent 65%),#080706}
+  body[data-theme="galaxy"]:not(.home-mode){background-color:#070813;background-image:radial-gradient(ellipse at 45% 20%,#f2930b0c,transparent 60%),radial-gradient(circle at 16px 24px,#ffffff55 .7px,transparent 1.1px),radial-gradient(circle at 52px 60px,#fbdf5e44 .7px,transparent 1px),radial-gradient(ellipse at 85% 75%,#47527c22,transparent 60%);background-size:auto,83px 103px,149px 163px,auto}
+  body[data-theme="impulse"]:not(.home-mode){background-color:#101010;background-image:linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px),repeating-linear-gradient(135deg,transparent 0 170px,#f2930b0c 170px 172px);background-size:36px 36px,36px 36px,auto}
   .theme-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
-  .theme-choice{display:flex;align-items:center;gap:8px;padding:9px;text-align:left;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.13);color:var(--paper);font-weight:400;box-shadow:none}
+  .theme-choice{display:flex;flex-direction:column;align-items:stretch;gap:9px;min-width:0;padding:11px;text-align:left;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.13);color:var(--paper);font-weight:400;box-shadow:none}
   .theme-choice[aria-pressed="true"]{border-color:var(--brass-soft);background:rgba(255,255,255,.06)}
-  .theme-swatch{display:grid;place-items:center;flex:none;width:30px;height:38px;border-radius:5px;border:1px solid var(--theme-accent);background:var(--theme-swatch);color:var(--theme-accent);font-size:17px}
+  .theme-swatch{display:block;position:relative;flex:none;width:100%;height:74px;overflow:hidden;border-radius:7px;border:1px solid #ffffff24;background:var(--theme-preview,var(--theme-swatch))}
+  .theme-swatch::before,.theme-swatch::after{content:'';position:absolute;left:50%;top:17px;width:25px;height:37px;border-radius:4px;border:1px solid var(--theme-accent);box-shadow:0 3px 9px #0006}
+  .theme-swatch::before{background:var(--theme-swatch);transform:translateX(-80%) rotate(-17deg)}
+  .theme-swatch::after{background:#fff8e9;transform:translateX(-12%) rotate(12deg)}
+  .theme-classics{margin-top:16px;color:var(--muted);font-size:.75rem}
+  .theme-classics summary{cursor:pointer;padding:8px 0}
+  .theme-choice[aria-pressed="true"] .theme-swatch{outline:2px solid var(--theme-accent);outline-offset:2px}
   .theme-choice b{display:block;font-weight:500;font-size:.8rem}
   .theme-choice small{display:block;font-size:.61rem;line-height:1.35;color:var(--muted);margin-top:3px}
   .setting-help{font-size:.73rem;line-height:1.45;color:var(--muted);margin:7px 0 12px}
@@ -553,7 +566,7 @@
   .settings-panel .theme-choice{padding:10px 8px;gap:8px}
   .settings-panel .theme-choice b{font-size:.76rem}
   .settings-panel .theme-choice small{font-size:.59rem}
-  .settings-panel .theme-swatch{width:29px;height:40px}
+  .settings-panel .theme-swatch{width:100%;height:74px}
   .settings-footer{position:sticky;bottom:0;margin-top:14px;padding:13px 0 3px;background:var(--felt-deep);border-top:1px solid var(--line);border-radius:12px 12px 0 0;z-index:10;box-shadow:0 -8px 15px var(--felt-deep)}
   .settings-recap{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
   .settings-recap span{font-size:.62rem;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:30px;padding:4px 7px;color:var(--muted)}
@@ -1227,13 +1240,19 @@ function createScreen(){
 function stepRow(label,key,val,extra){ return '<label class="fld">'+label+'</label>'
   +'<div class="stepper"><button data-st="'+key+'" data-d="-1">\u2013</button><span class="val" id="v_'+key+'">'+val+'</span><button data-st="'+key+'" data-d="1">+</button>'+(extra||'')+'</div>'; }
 const VISUAL_THEMES=[
- {id:'forest',name:'Forêt',description:'Feutre émeraude et or',swatch:'#244b3e',accent:'#e0b673'},
+ {id:'forest',name:'Tapis casino',description:'Le classique : feutre vert et cartes ivoire',swatch:'#244b3e',accent:'#e0b673',signature:true,preview:'radial-gradient(ellipse at 50% 20%,#315d4e,#102824)'},
+ {id:'signature',name:'LueurVivante',description:'Noir profond, lumière orange et jaune doux',swatch:'#100e0a',accent:'#f2930b',signature:true,preview:'radial-gradient(ellipse at 30% 0%,#f2930b44,transparent 80%),#080706'},
+ {id:'galaxy',name:'Galaxie',description:'Nuit étoilée, profondeur et lumière discrète',swatch:'#0c0e1b',accent:'#fbdf5e',signature:true,preview:'radial-gradient(circle at 12px 12px,#ffffff88 1px,transparent 1.4px) 0 0 / 31px 27px,radial-gradient(ellipse at 85% 30%,#394263,#070813)'},
+ {id:'impulse',name:'Impulsion',description:'Graphite, lignes de mouvement et orange vif',swatch:'#111111',accent:'#f2930b',signature:true,preview:'repeating-linear-gradient(135deg,transparent 0 24px,#f2930b44 24px 26px),#151515'},
  {id:'midnight',name:'Bleu nuit',description:'Encre bleue et reflets glacés',swatch:'#173c68',accent:'#96c9f1'},
  {id:'amethyst',name:'Améthyste',description:'Violet profond et cuivre rosé',swatch:'#4b2e66',accent:'#e8abd7'},
  {id:'burgundy',name:'Velours',description:'Bordeaux et champagne',swatch:'#652f3e',accent:'#ebc492'},
  {id:'amber',name:'Club ambré',description:'Brun café et lumière miel',swatch:'#59432c',accent:'#e8bd69'}
 ];
-function themeChoices(){return '<div class="theme-picker" role="group" aria-label="Thème visuel">'+VISUAL_THEMES.map(t=>'<button type="button" data-theme-choice="'+t.id+'" class="theme-choice" aria-pressed="'+(draft.theme===t.id)+'" style="--theme-swatch:'+t.swatch+';--theme-accent:'+t.accent+'"><span class="theme-swatch" aria-hidden="true">✦</span><span><b>'+t.name+'</b><small>'+t.description+'</small></span></button>').join('')+'</div>';}
+function themeChoices(){
+ const cards=themes=>'<div class="theme-picker" role="group" aria-label="Thèmes visuels">'+themes.map(t=>'<button type="button" data-theme-choice="'+t.id+'" class="theme-choice" aria-pressed="'+(draft.theme===t.id)+'" style="--theme-swatch:'+t.swatch+';--theme-accent:'+t.accent+';--theme-preview:'+(t.preview||t.swatch)+'"><span class="theme-swatch" aria-hidden="true"></span><span><b>'+t.name+'</b><small>'+t.description+'</small></span></button>').join('')+'</div>';
+ return cards(VISUAL_THEMES.filter(t=>t.signature))+'<details class="theme-classics"'+(VISUAL_THEMES.some(t=>t.id===draft.theme&&!t.signature)?' open':'')+'><summary>Autres ambiances</summary>'+cards(VISUAL_THEMES.filter(t=>!t.signature))+'</details>';
+}
 function normalizeConfig(input={}){
   const bounded=(v,min,max,fallback)=>Number.isFinite(Number(v))?Math.min(max,Math.max(min,Math.trunc(Number(v)))):fallback;
   const level=LEVEL_PRESETS[input.level]?input.level:'normal', preset=LEVEL_PRESETS[level];
@@ -1277,7 +1296,7 @@ function configScreen(){
     +'<div class="setting-inline"><div><b>Tour sauté après une erreur sur ta carte</b></div>'+toggle('sk',draft.snapSkipTurn)+'</div>'
     +'<div class="setting-inline"><div><b>Ton rôle</b></div><div class="settings-toggle"><button id="adPlay" aria-pressed="'+draft.adminPlays+'">Je joue</button><button id="adRef" aria-pressed="'+!draft.adminPlays+'">J’observe</button></div></div>'
     +'<details class="settings-identity"><summary>'+selectedIcon+' '+esc(draft.hostName||'Ton personnage')+' <span>Modifier mon personnage ↗</span></summary><label class="fld">Pseudo<input id="configName" maxlength="14" value="'+esc(draft.hostName||'')+'"></label>'+avatarPicker(draft.avatar,'host')+'</details></div>';
-  if(settingsTab==='theme')panel='<div class="settings-section-title"><h3>Choisis ton ambiance</h3><p>Un même univers pour toute la table. Aperçu immédiat.</p></div>'+themeChoices();
+  if(settingsTab==='theme')panel='<div class="settings-section-title"><h3>Choisis ton ambiance</h3><p>Un même univers pour toute la table. Choisis une ambiance et regarde le décor changer.</p></div>'+themeChoices();
   render('<div class="settings-shell"><header class="settings-header"><span class="eyebrow">TA TABLE, TES RÈGLES</span><h2>Préparer la partie</h2></header><nav class="settings-tabs" role="tablist" aria-label="Réglages de la partie">'+tabs.map(([id,icon,label,value])=>'<button role="tab" id="settings-tab-'+id+'" data-settings-tab="'+id+'" aria-selected="'+(settingsTab===id)+'" aria-controls="settingsPanel"><span class="settings-tab-icon">'+icon+'</span><b>'+label+'</b><small>'+value+'</small></button>').join('')+'</nav>'
     +'<section class="settings-panel" id="settingsPanel" role="tabpanel" aria-labelledby="settings-tab-'+settingsTab+'">'+panel+'</section>'
     +'<footer class="settings-footer"><div class="settings-recap"><span>'+draft.nPlayers+' joueurs · '+draft.bots+' bot(s)</span><span>'+draft.handSize+' cartes · '+draft.peek+' à mémoriser</span><span>'+(draft.turnTimer?draft.turnSecs+' s par tour':'Sans chrono')+' · '+VISUAL_THEMES.find(t=>t.id===draft.theme).name+'</span></div><p class="settings-capacity">'+(humans?humans+' ami(s) pourront rejoindre avec le code.':'Tout est prêt : tu peux jouer sans attendre.')+'</p><div class="settings-bottom-actions"><button class="btn-ghost" id="backCreate">Retour</button><button class="btn-primary" id="doCreate">Créer la salle <span>↗</span></button></div></footer></div>',false);

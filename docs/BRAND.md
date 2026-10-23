@@ -58,3 +58,7 @@ Fichiers de l’intégration visuelle : `AGENTS.md`, `README.md`, `docs/BRAND.md
 ## Correction du PDF - 23 octobre 2026
 
 Les anciennes pages de logos ont été remplacées, pas masquées par un calque. La nouvelle couverture utilise également la flamme. Six pages relues après rendu ; texte et pixels des pages 4–6 comparés à la version fournie et identiques. Le seul changement de référence de logo est celui explicitement demandé par Jonathan. Les fichiers des polices Sequel restent à fournir pour la réalisation de nouveaux textes dans ces fontes exactes.
+
+## Ambiances de table
+
+Voir [THEMES.md](THEMES.md) : Tapis casino, LueurVivante, Galaxie et Impulsion. Les nouveaux décors s’inspirent de la page Univers & identité sans reproduire les créations tierces du moodboard. La flamme reste l’unique logo ; les étoiles et motifs du thème Galaxie sont décoratifs.
