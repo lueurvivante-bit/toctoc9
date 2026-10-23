@@ -1070,7 +1070,7 @@ let lobbyPlayersRef=null, meRef=null, metaRef=null, stateRef=null, privRef=null,
 let gstate=null, myDrawn=null, myLook=null, myHand=null, inGame=false;
 let G=null;                 // mémoire autoritaire (organisateur)
 var snapMode=false, figSel=null, lastPlaced=null, lastFailSeen=0;  // état UI local (étaient implicites → déclarés ici)
-var botTimer=null, hostCfg=null;  // étaient implicites → ReferenceError au tour du bot ⇒ bot bloqué
+var botTimer=null, hostCfg=null, roomCreator=null;  // roomCreator : créateur de la salle (serveur), garde sa place même s'il s'absente  // étaient implicites → ReferenceError au tour du bot ⇒ bot bloqué
 
 /* ====== JUS : son · vibration · confettis · flash ====== */
 let fxMuted=false, AC=null;
@@ -1394,11 +1394,14 @@ function launchGame(players){
   if(!isHost||launchInProgress)return;
   const cfg=normalizeConfig(hostCfg||{nPlayers:players.length,level:roomLevel});
   const hostId=uid;
+  /* Le siège « organisateur » (joueur ou arbitre) revient au créateur de la salle,
+     même si un autre joueur tient le rôle pendant son absence : pas d'échange de rôles. */
+  const seat=(roomCreator&&players.some(function(p){return p.uid===roomCreator;}))?roomCreator:hostId;
   const order=[]; const names={};
-  if(cfg.adminPlays){ order.push(hostId); }
+  if(cfg.adminPlays){ order.push(seat); }
   for(let i=0;i<(cfg.bots||0);i++){ const bid='bot_'+(i+1); order.push(bid); names[bid]='Bot '+(i+1); }
-  players.forEach(function(p){ if(p.uid!==hostId){ order.push(p.uid); names[p.uid]=p.name; } });
-  if(cfg.adminPlays){ const hp=players.filter(function(p){return p.uid===hostId;})[0]; names[hostId]=hp?hp.name:'Toi'; }
+  players.forEach(function(p){ if(p.uid!==seat){ order.push(p.uid); names[p.uid]=p.name; } });
+  if(cfg.adminPlays){ const hp=players.filter(function(p){return p.uid===seat;})[0]; names[seat]=hp?hp.name:'Toi'; }
   if(order.length<2||order.length>cfg.nPlayers||new Set(order).size!==order.length){toast('Il faut entre 2 et '+cfg.nPlayers+' joueurs distincts pour lancer.','bad');return;}
   launchInProgress=true;
   const cleanNames=dedupeNames(order.map(u=>names[u]));order.forEach((u,i)=>names[u]=cleanNames[i]);
@@ -1839,7 +1842,7 @@ function peekRevealTimes(){try{return JSON.parse(localStorage.getItem(peekStorag
 function renderPeek(){
   if(gstate.order.indexOf(uid)<0){
     render('<div class="eyebrow center">manche '+gstate.round+'</div><h2 style="text-align:center">Tu arbitres</h2>'
-      +'<p class="sub" style="text-align:center">Les joueurs m\u00e9morisent leur carte\u2026 la partie va commencer.</p>'); return;
+      +'<p class="sub" style="text-align:center">Les joueurs m\u00e9morisent leur carte\u2026 la partie va commencer.</p>'+absentNote()); return;
   }
   const visible=peekRevealTimes();
   const slots=(myHand||[]).map(function(c,i){const showing=visible[i]>Date.now()&&!gstate.peekDone?.[uid];return '<div class="slot"><div data-peek="'+i+'" role="button" tabindex="0" aria-label="Regarder la carte '+(i+1)+'">'+(showing?cardFace(c):cardBack())+'</div><span class="n">'+(i+1)+'</span></div>'; }).join('');
@@ -1852,7 +1855,7 @@ function renderPeek(){
     +'<p class="sub" style="text-align:center">'+(curPeek()?'Tu as '+(gstate.handSize||4)+' cartes. Choisis '+curPeek()+' carte'+(curPeek()>1?'s différentes, visibles':' différente, visible')+' trois secondes chacune.':'Tu as '+(gstate.handSize||4)+' cartes cachées. Aucune à regarder : confirme pour commencer.')+'</p>'
     +'<div class="seatrow" style="margin-top:18px;'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+slots+'</div></div>'
     +configDetails(gstate,true)
-    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
+    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div>'+absentNote()+'</div>');
 }
 const PLAYER_PALETTE=[
   ['#e8bf50','#fff0b0'],['#579ded','#b7daff'],['#42cbbb','#a4f3e8'],['#8056bf','#e0c5ff'],['#df6669','#ffc7c9'],
@@ -1939,6 +1942,7 @@ function renderTurn(){
   let bar = fig ? (fig.by===uid?'<div class="turnbar me">\u2728 Ton pouvoir : '+(fig.reward?'Récompense de prise':fig.rank==='J'?'Valet':fig.rank==='Q'?'Dame':'Roi')+'</div>'
                                  :'<div class="turnbar them">'+nameOf(fig.by)+' utilise une figure\u2026</div>')
                 : '<div class="turnbar '+(myTurn?'me':'them')+'">'+(myTurn?'À toi de jouer':nameOf(cur)+' joue')+' <span class="next-turn">→ ensuite '+(nextPlayer===uid?'toi':nameOf(nextPlayer))+'</span>'+(gstate.turnTimer?'<span id="tdc" class="tdc"></span>':'')+'</div>';
+  bar+=absentNote();
   /* tapis central : pioche + (carte piochée) + défausse */
   const deckCnt=gstate.deckCount||0;
   const deckLive=(myTurn&&!myDrawn&&!fig);
@@ -2099,23 +2103,33 @@ function botFigure(id,rank){
   releaseProtection(id,mine);releaseProtection(opp,os);[h[mine],G.hands[opp][os]]=[G.hands[opp][os],h[mine]];
   rememberBot(id,mine,rank==='K'?h[mine]:null);rememberBot(opp,os,null);writeHand(id);writeHand(opp);rememberOpponent(id,opp,os,outgoing);
 }
-// Presence is independent from screen refreshes. The local server elects a live host.
+/* ====== Joueur absent (exécuté par le serveur, chaque seconde) ======
+   Un humain absent n'est JAMAIS joué par un bot (ni pioche, ni échange, ni TOC).
+   Sans chrono : la partie l'attend (l'organisateur peut le retirer).
+   Avec chrono : le chrono de tour (forceSkip) passe son tour, et la mémorisation
+   est validée pour lui une fois la durée du chrono écoulée. */
+var ABSENT_MS=10000;
+function hostPresenceTick(seen){
+  if(!isHost||!G||!gstate)return;
+  const now=Date.now();
+  const away=u=>{if(isBotId(u))return false;if(seen[u]){if(G.absentSince)delete G.absentSince[u];return now-seen[u]>ABSENT_MS;}G.absentSince=G.absentSince||{};G.absentSince[u]=G.absentSince[u]||now;return now-G.absentSince[u]>ABSENT_MS;};
+  const absent={};if(gstate.phase!=='over')G.order.forEach(u=>{if(away(u))absent[u]=true;});
+  if(JSON.stringify(absent)!==JSON.stringify(gstate.absent||{}))stateRef.update({absent:absent});
+  if(gstate.phase==='peek'&&G.turnTimer){
+    if(G._peekFor!==gstate.peekId){G._peekFor=gstate.peekId;G._peekStart=now;}
+    if(now-G._peekStart>=(G.turnSecs||10)*1000){const done=gstate.peekDone||{};G.order.forEach(u=>{if(absent[u]&&!done[u])db.ref('games/'+code+'/state/peekDone/'+u).set(true);});}
+  }
+}
+function absentNote(){
+  const a=(gstate&&gstate.absent)||{},list=(gstate.order||[]).filter(u=>a[u]&&u!==uid);if(!list.length)return '';
+  const why=gstate.turnTimer?(gstate.phase==='peek'?'validé à la fin du chrono':'tour passé à la fin du chrono'):'la partie l\u2019attend';
+  return '<div class="note center absent-note">'+list.map(u=>nameOf(u)+(isHost?'<button class="kickbtn" data-kick="'+u+'" title="Retirer de la partie">\u2715</button>':'')).join(', ')+(list.length>1?' sont absents':' est absent')+' \u00b7 '+why+'</div>';
+}
+// Présence : l'interface signale seulement la connexion ; l'absence est gérée par le serveur.
 setInterval(async function(){
   if(!uid||!code)return;
   try{
-    const data=await cloudHeartbeat(code,uid);setStatus('connecté','ok');
-    if(isHost && G && data.revision && data.revision!==window.offlineRevision){window.offlineRevision=data.revision;G=null;await becomeHost();return;}
-    if(!isHost||!G||!gstate)return;
-    const away=u=>{if(isBotId(u))return false;if(data.seen[u]){if(G.absentSince)delete G.absentSince[u];return Date.now()-data.seen[u]>10000;}G.absentSince=G.absentSince||{};G.absentSince[u]=G.absentSince[u]||Date.now();return Date.now()-G.absentSince[u]>10000;};
-    if(gstate.phase==='peek'){
-      for(const u of G.order) if(away(u)) db.ref('games/'+code+'/state/peekDone/'+u).set(true);
-    }
-    if(gstate.phase!=='turn')return;
-    const u=G._fig?G._fig.by:G.order[G.turnIndex];
-    if(!away(u))return;
-    if(G._fig){botFigure(u,G._fig.rank);finishFigure();pushState();}
-    else if(G._drawn){G.discard.push(G._drawn);G._drawn=null;clearPriv(u);advanceTurn();pushState();}
-    else {botMove(u);}
+    await cloudHeartbeat(code,uid);setStatus('connecté','ok');
   }catch(e){setStatus('hors ligne · reprise automatique','err');}
 },1000);
 
@@ -2258,6 +2272,10 @@ function bind(){
     cc.onclick=doCopy; const cb=document.getElementById('codeBox'); if(cb) cb.onclick=doCopy; }
   const lv=document.getElementById('leave'); if(lv){ lv.onclick=leaveRoom; }
 
+  /* hôte : retirer un joueur / bot (absent) */
+  screen.querySelectorAll('[data-kick]').forEach(function(el){ el.onclick=function(ev){ ev.stopPropagation(); const who=el.dataset.kick;
+    const label=(gstate.names&&gstate.names[who])||'ce joueur';
+    if(confirm('Retirer '+label+' de la partie ?')){ playSfx('discard'); postAction({type:'kick',who:who}); } }; });
       const pd=document.getElementById('peekDone');
   if(pd){
     const peekKey=peekStorageKey();
@@ -2296,10 +2314,6 @@ function bind(){
     selectExchangeCard('opp',os,opp);
   }; });
   screen.querySelectorAll('[data-mine],[data-opp]').forEach(el=>{el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};});
-  /* hôte : retirer un joueur / bot */
-  screen.querySelectorAll('[data-kick]').forEach(function(el){ el.onclick=function(ev){ ev.stopPropagation(); const who=el.dataset.kick;
-    const label=(gstate.names&&gstate.names[who])||'ce joueur';
-    if(confirm('Retirer '+label+' de la partie ?')){ playSfx('discard'); postAction({type:'kick',who:who}); } }; });
 }
 
 </script>

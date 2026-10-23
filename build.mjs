@@ -76,6 +76,7 @@ ${script}
       hostCfg = normalizeConfig(meta.cfg || {});
       roomLevel = meta.level || 'normal';
       roomAvatars = Object.assign({}, reservations || {});
+      roomCreator = meta.creator || null;
       launchGame(players);
       return __lastToast;
     },
@@ -101,20 +102,8 @@ ${script}
       if (stateRef) stateRef.update({ phase: 'over', verdict: 'Partie terminée — pas assez de joueurs.', winner: null, pendingFigure: null });
       return null;
     },
-    // Joueur absent : même logique que l'ancienne boucle de présence de l'organisateur.
-    presenceTick(seen) {
-      if (!G || !gstate) return;
-      const away = u => { if (isBotId(u)) return false; if (seen[u]) { if (G.absentSince) delete G.absentSince[u]; return Date.now() - seen[u] > 10000; } G.absentSince = G.absentSince || {}; G.absentSince[u] = G.absentSince[u] || Date.now(); return Date.now() - G.absentSince[u] > 10000; };
-      if (gstate.phase === 'peek') {
-        for (const u of G.order) if (away(u)) db.ref('games/' + code + '/state/peekDone/' + u).set(true);
-      }
-      if (gstate.phase !== 'turn') return;
-      const u = G._fig ? G._fig.by : G.order[G.turnIndex];
-      if (!away(u)) return;
-      if (G._fig) { botFigure(u, G._fig.rank); finishFigure(); pushState(); }
-      else if (G._drawn) { G.discard.push(G._drawn); G._drawn = null; clearPriv(u); advanceTurn(); pushState(); }
-      else { botMove(u); }
-    },
+    // Joueur absent : jamais joué par un bot. Voir hostPresenceTick dans public/index.html.
+    presenceTick(seen) { hostPresenceTick(seen); },
   };
 }
 `;

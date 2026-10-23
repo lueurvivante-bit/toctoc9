@@ -4,6 +4,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { createRuntime } from './engine.gen.js';
 import { Store, serverFirebase } from './store.js';
+import { electHost } from './host.js';
 
 const ROOM_RE = /^[A-Z0-9]{4}$/;
 const ICONS = ['fox', 'bear', 'panda', 'lion', 'tiger', 'koala', 'frog', 'owl', 'monkey', 'penguin', 'unicorn', 'octopus', 'cat', 'dog', 'rabbit', 'mouse', 'wolf', 'chick', 'dragon', 'robot'];
@@ -108,7 +109,7 @@ export class Room extends DurableObject {
         const v = m.value || {};
         if (meta) throw new Error('Ce code de partie existe déjà.');
         if (v.host !== uid || v.phase !== 'lobby') throw new Error('création invalide');
-        this.store.write(path, 'set', { host: uid, phase: 'lobby', level: String(v.level || 'normal'), cfg: v.cfg || {}, createdAt: Date.now() });
+        this.store.write(path, 'set', { host: uid, creator: uid, phase: 'lobby', level: String(v.level || 'normal'), cfg: v.cfg || {}, createdAt: Date.now() });
         this.ensureEngine();
         this.runtime.setHost(uid);
       } else if (rel[0] === 'meta' && op === 'update') {
@@ -247,7 +248,7 @@ export class Room extends DurableObject {
     }, 1000);
   }
 
-  // ---------- Présence : reprise automatique et organisateur de secours ----------
+  // ---------- Présence : organisateur de secours, rendu au créateur à son retour ----------
   startTick() {
     if (this.tick) return;
     this.tick = setInterval(() => this.presence(), 1000);
@@ -259,12 +260,10 @@ export class Room extends DurableObject {
     for (const c of this.sockets) if (c.uid) this.seen[c.uid] = now;
     const g = this.game(), meta = g.meta;
     if (!meta) return;
-    if (now - this.born > 10000 && now - (this.seen[meta.host] || 0) > 10000) {
-      const live = Object.keys(g.players || {}).filter((u) => now - (this.seen[u] || 0) < 3000).sort();
-      if (live[0] && live[0] !== meta.host) {
-        this.store.write(this.base() + '/meta', 'update', { host: live[0] });
-        this.runtime.setHost(live[0]);
-      }
+    const next = electHost(meta, g.players, this.seen, now, this.born);
+    if (next) {
+      this.store.write(this.base() + '/meta', 'update', { host: next });
+      this.runtime.setHost(next);
     }
     try { this.runtime.presenceTick(this.seen); } catch (e) { console.error('presence', e); }
   }
