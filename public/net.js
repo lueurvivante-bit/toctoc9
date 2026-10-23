@@ -4,7 +4,8 @@
 (function () {
   const params = new URLSearchParams(location.search);
   const profile = params.get('profil') || 'principal';
-  const SERVER = (window.TOCTOC_SERVER || location.origin).replace(/^http/, 'ws');
+  // Même dossier que la page : https://lueurvivante.fr/toctoc/ → wss://lueurvivante.fr/toctoc/ws.
+  const SERVER = (window.TOCTOC_SERVER || location.origin + String(location.pathname || '/').replace(/[^/]*$/, '').replace(/\/$/, '')).replace(/^http/, 'ws');
   let identity = localStorage.getItem('toc9-uid:' + profile);
   if (!identity) { identity = crypto.randomUUID(); localStorage.setItem('toc9-uid:' + profile, identity); }
   let secret = localStorage.getItem('toc9-token:' + profile);

@@ -10,6 +10,7 @@ noter des mains, noms, jetons ou informations d’élèves.
 | B003 | Impossible de mémoriser/confirmer ou lancer après relance | Signalé le 23/10 ; moteur : transitions validées, cause exacte sur téléphone encore à confirmer. Bouton indique désormais le nombre de cartes restant à regarder. |
 | B004 | Écriture sans ACK ou réservation d’identité sans réponse : promesse indéfinie | Reproduit avec transport simulé. Délai de 8 s, rejet explicite, verrou retiré et message visible ; test network.cjs. |
 | B005 | Refus/erreur serveur seulement en console, verrou jusqu’à une nouvelle vue | Erreurs journalisées, état explicite, verrou retiré sur ACK/refus et reconnexion sur erreur serveur. Tests refus/déconnexion. |
+| B007 | Téléphone « déconnecté » après être allé envoyer un message : retour sur l’accueil, rejoindre avec le code refusé (« Cette partie a déjà commencé »), seulement spectateur | Cause : lueurvivante.fr/toctoc/ affichait le jeu dans une iframe tierce workers.dev ; WebKit (tous les navigateurs iOS) rend le localStorage d’une iframe tierce partitionné **et éphémère**, donc `toc9-uid/token/session` perdus quand Safari est tué en arrière-plan → nouvel uid. Chromium : deux identités différentes entre lueurvivante.fr/toctoc et workers.dev (partitionnement, observé le 23/10). Correctif : le jeu est servi en premier plan sous lueurvivante.fr/toctoc/ (route `/toctoc/*`, src/route.js, WebSocket `/toctoc/ws`), iframe supprimée ; workers.dev inchangé. Preuve : tests/entree.mjs, wrangler dev local (308 /toctoc→/toctoc/, net.js et ws sous /toctoc/). **Non déployé ; à vérifier sur iPhone réel.** |
 
 ## Collecte locale
 
@@ -42,3 +43,17 @@ B006 — Reproduit sur l’écran de fin : les deux totaux dépassent la limite,
 le plus petit gagne selon la règle existante, mais le verdict indique que
 tous sont éliminés. Corrigé dans le texte de finishRound/renderOver ; résultat
 et élimination inchangés. Test de régression : 33 contre 43, limite 30.
+
+## B007 — entrée en premier plan (23 octobre)
+
+Migration unique : les identités créées dans l’ancienne iframe sont partitionnées
+sous lueurvivante.fr et ne sont pas lisibles en premier plan ; un joueur au milieu
+d’une partie lancée avant la mise en ligne la perd une fois. Déployer entre deux
+parties. Les identités workers.dev ne sont pas transférées non plus (autre origine).
+
+À vérifier sur iPhone réel après déploiement (test décisif) : ouvrir
+lueurvivante.fr/toctoc/ dans Safari, rejoindre une partie, fermer Safari de force
+(sélecteur d’apps), rouvrir la même adresse : la partie doit reprendre avec le même
+joueur, sans repasser par l’accueil. Refaire depuis l’app Messages (lien ouvert puis
+retour) et depuis Chrome iOS. Vérifier aussi que wss://lueurvivante.fr/toctoc/ws
+s’ouvre (onglet Réseau) et que lueurvivante.fr/toctoc (sans barre) redirige.
