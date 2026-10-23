@@ -21,4 +21,8 @@ Limite : émulation navigateur, pas essais sur appareils iOS/Android physiques. 
 
 ## Publication
 
-À compléter après déploiement et vérification de l’adresse officielle.
+PR #22 intégrée, révision applicative `0096b42`. Version Cloudflare `d0bd087c-604f-4442-8fa6-c72f4b6017da` publiée. HTTPS `https://lueurvivante.fr/toctoc/` répond 200 et son HTML est strictement identique aux sources.
+
+Contrôle navigateur en ligne : nouvelle salle Galaxie par défaut avec bot ; mémorisation validée puis pioche. À 375×667, les quatre commandes (Défausser, Piocher, TOC, Prendre) sont entièrement visibles, de hauteur 44 px, sans défilement de page. Capture `/tmp/toctoc-fixed-screen-live.png`. Salle de contrôle quittée proprement après vérification. Il s’agit toujours d’émulation navigateur, pas d’un téléphone physique.
+
+Diff de la correction : 7 fichiers, 114 insertions et 20 suppressions avant ce reçu documentaire. Fichiers exacts : `public/index.html`, `tests/rules.cjs`, `tests/engine.mjs`, `tests/layout-preview.mjs`, `docs/BRAND.md`, `docs/THEMES.md`, `docs/FIXED_SCREEN_2026-10-23.md`. Aucun changement de la Galaxie Academy, des e-mails, du DNS, des routes ou du transport Toc Toc.
