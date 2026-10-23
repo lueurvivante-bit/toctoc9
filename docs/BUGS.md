@@ -47,6 +47,8 @@ et élimination inchangés. Test de régression : 33 contre 43, limite 30.
 
 ## B009 — Absence d’un joueur humain
 
+**Historique : la variante de correction ci-dessous est remplacée par la règle actuelle de `PRESENCE_SPEC.md` : dix secondes avec ou sans chrono, aucun bot et aucune validation automatique de mémorisation.**
+
 | | |
 |---|---|
 | Signalement | 23/10, partie réelle à deux navigateurs sur le serveur public : page quittée environ 65 s. Au retour, la manche 1 était finie, la mémorisation de la manche 2 validée sans voir de carte, et environ trois tours joués à sa place. Le créateur, de retour, voyait « En attente de l’organisateur… » aux écrans de fin. |
@@ -64,3 +66,19 @@ WebSocket locaux validés ; non déployé et non vérifié sur téléphone physi
 ### 23 octobre — transitions quitter / recréer / rejoindre
 
 Risques constatés dans les gestionnaires : création/entrée non verrouillées (double appui), variables de salle globales réutilisées par une réponse tardive, sortie effaçant la reprise avant confirmation serveur, ancien transport conservé et susceptible de se reconnecter. La confirmation native de sortie bloquait aussi les pilotes navigateur. Correctif : demandes uniques et invalidables, paramètres capturés, sortie confirmée dans la page, attente ACK/retrait, libération du seul transport quitté. Tests et limites : `docs/PRESENCE_SPEC.md`, section Parcours de salle. Aucun test matériel mobile ni campagne Claude complète revendiqué ici.
+
+
+## Consolidation du rapport — 23 octobre 2026
+
+Le comptage du bilan fait autorité dans [AUDIT_REPORT_2026-10-23.md](AUDIT_REPORT_2026-10-23.md). Sept anomalies établies : B001, B004, B005, B006, B007, B008, B009. B002 et B003 restent des signalements ouverts ; ils ne sont pas ajoutés comme deux causes distinctes déjà prouvées. Les identifiants B006/B007 réutilisés par les branches de Claude sont normalisés ici : la prise périmée devient B008 ; l’entrée iframe devient B010.
+
+| ID | Signalement / risque | État et preuve |
+|---|---|---|
+| B008 | Prise correcte jugée contre une défausse arrivée entre le clic et le traitement : pénalité injustifiée | Observé par Claude en duel, issue #5 ; PR #8 ouverte. Tests règles/moteur passent ; capture au clic Prendre + manche ajoutée par Claude. Non publié, pas encore rejoué sur la version corrigée en duel. Les 4→12 cartes de Codex ne sont pas une preuve de cette cause : erreur de pilotage distincte. |
+| B010 | Risque de perte d’identité dans l’iframe tierce du domaine officiel, notamment après arrêt du navigateur iOS | Architecture constatée et risque analysé par Claude, PR #7 ouverte ; routage en premier plan testé localement par Claude. Perte d’identité exacte non confirmée par nous sur iPhone physique. |
+| B011 | Création/entrée non verrouillée : plusieurs demandes possibles par doubles appuis | Risque de code, pas une nouvelle observation en duel ; correctif PR #12, tests lifecycle. |
+| B012 | Réponse tardive d’une ancienne demande susceptible de changer la salle après annulation | Risque de code ; correctif PR #12, tests contrôlant l’ordre des réponses et la nouvelle salle. |
+| B013 | Reprise locale effacée avant confirmation de sortie serveur | Risque de code ; correctif PR #12, test d’attente ACK et retrait joueur. |
+| B014 | Transport d’une ancienne salle conservé et susceptible de se reconnecter après sortie | Risque de code ; correctif PR #12, test de libération et absence de reconnexion différée. |
+
+Incidents de test exclus du nombre de bugs du jeu : I001, suivi de positions périmées par le pilotage Codex en fin de partie 4 ; I002, contrôle Chrome indisponible autour du dialogue natif Quitter. L’origine exacte de l’indisponibilité du contrôle n’est pas prouvée. PR #12 remplace ce dialogue par une confirmation dans la page, testée localement.
