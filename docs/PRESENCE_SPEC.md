@@ -42,3 +42,18 @@ instantanée d’un arrêt brutal d’iOS ou du réseau.
 - Ces contrôles ne constituent ni dix duels humains, ni un test sur iPhone physique.
   Les scénarios navigateur et la vérification publique doivent être consignés
   séparément, sans conclure « zéro bug dans tous les cas ».
+
+## Parcours de salle — correctif complémentaire du 23 octobre
+
+- Création et entrée sont à demande unique : un double appui ne réserve pas deux salles/identités. Les paramètres sont capturés au départ ; une réponse arrivée après le retour à l’accueil ne peut plus changer la salle affichée.
+- « Quitter » est une sortie explicite, confirmée dans la page. « Rester » n’envoie aucune sortie. La boîte native `confirm()` qui suspendait le navigateur est supprimée pour ce parcours.
+- La sortie attend l’accusé serveur et le retrait du joueur avant d’effacer la reprise locale. Si elle échoue, l’interface conserve la salle et propose de réessayer.
+- Le transport d’une salle quittée est fermé et ses reconnexions différées annulées ; créer/rejoindre ensuite utilise uniquement la nouvelle salle. L’identité de navigateur reste stable, le pseudo/personnage peut changer.
+
+### Vérifications réalisées en local
+
+`npm test` : moteur, dix simulations avec redémarrage, absence avec/sans chrono, réseau et transitions asynchrones passent. `tests/lifecycle.cjs` exerce les vrais gestionnaires avec réponses retardées : double création/entrée, ancienne réponse après annulation, nouveau pseudo/nouvelle salle, annulation de sortie, attente des confirmations. `tests/network.cjs` vérifie l’absence de reconnexion d’une salle libérée.
+
+Deux interfaces navigateur réelles sur Wrangler local (`8137`, salle jetable `4FTY`) : mémorisation interrompue puis reprise sans validation automatique ; retour avant expiration ; absence au tour sans chrono jusqu’au passage de tour ; retour au même siège, pioche/défausse effectives ensuite ; absence après pioche, défausse de cette carte au délai ; annulation de sortie puis sortie explicite ; nouvelle salle `PAAY` avec nouveau pseudo/personnage. Le décompte a été observé visuellement (capture locale `/tmp/toctoc-absence-countdown.png`).
+
+Limites : ces vérifications navigateur sont deux clients de diagnostic pilotés par Codex, pas des parties compétitives Codex–Claude ni un test matériel iPhone/Android. Les dix simulations ne remplacent pas les dix duels humains demandés. Un système mobile qui coupe immédiatement tout réseau peut empêcher le signal d’arrière-plan ; le serveur utilise alors le dernier battement pour détecter l’absence, avec un délai de détection supplémentaire. Une reprise exige le même profil de navigateur et son stockage local conservé.

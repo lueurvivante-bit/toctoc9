@@ -103,6 +103,20 @@ function client(){
   c.events.window.pagehide();assert.equal(next.sent.at(-1).active,false);
   c.events.window.pageshow({persisted:true});assert.equal(next.readyState,3);
  }
+ // Sortie volontaire : aucune reconnexion de l'ancienne salle, même après délai déjà programmé.
+ {
+  const c=client(),db=c.ctx.window.firebase.database();
+  db.ref('games/OLD1/state').on('value',()=>{});const old=c.hello({pong:true});
+  c.recv(old,{t:'view',d:{state:{phase:'turn'}}});old.close();
+  c.ctx.window.cloudReleaseRoom('OLD1');c.run(300);c.run(600);
+  assert.equal(c.sockets.length,1,'ancienne salle reconnectée après sortie');
+  db.ref('games/NEW1/state').on('value',()=>{});const next=c.hello({pong:true});
+  c.recv(next,{t:'view',d:{state:{phase:'lobby'}}});await new Promise(setImmediate);
+  assert.equal(c.sockets.length,2);assert.notEqual(next,old);
+  assert.equal(next.sent[0].uid,old.sent[0].uid,'identité globale perdue entre salles');
+  c.ctx.window.cloudReleaseRoom('NEW1');assert.equal(next.readyState,3);
+  c.run(300);c.run(600);assert.equal(c.sockets.length,2);
+ }
  console.log('Arrière-plan, battement visible, pagehide, retour/BFCache : identité et vue de partie préservées OK');
  console.log('Réseau B007 : prise muette remplacée après ACK absent, vue complète, aucune action rejouée, coup suivant confirmé ; mémorisation renvoyée une fois ; vigie ping/pong OK');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1157,7 +1157,7 @@ function genCode(){ const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let
 
 /* ====== Lobby screens ====== */
 function closeHomeRoute(){const url=new URL(location.href);url.searchParams.delete('accueil');history.replaceState(null,'',url);}
-function homeScreen(){
+function homeScreen(){ roomOperation++;roomBusy=false;roomTarget=null;
   let saved=null;try{saved=JSON.parse(localStorage.getItem(sessionKey)||'null');}catch(e){}
   render('<div class="home-lobby">'
     +'<header class="home-header"><a class="home-signature" href="#" aria-label="Toc Toc, accueil"><span class="signature-star">✳</span><span>LueurVivante<small>LES JEUX QUI NOUS RAPPROCHENT</small></span></a>'+(saved?'<button id="homeResume" class="home-resume">Reprendre <span aria-hidden="true">↗</span></button>':'<span class="home-edition">LE JEU DE CARTES</span>')+'</header>'
@@ -1191,6 +1191,7 @@ function rulesScreen(){
     +'</div><div class="actions"><button class="btn-primary" id="rulesBack">Compris</button></div>');
 }
 let draft=null;
+let roomOperation=0,roomBusy=false,leavingRoom=false,roomTarget=null;
 function createScreen(){
   if(!draft) draft={hostName:'',level:'normal',nPlayers:2,handSize:4,peek:1,snapSkipTurn:true,adminPlays:true,bots:0,turnTimer:false,turnSecs:10};
   render('<h2>Cr\u00e9er une session</h2><p class="sub">Choisis le niveau et entre ton pseudo.</p>'
@@ -1327,26 +1328,31 @@ function lobbyKickBot(){
 
 
 /* ====== Lobby network ====== */
-function createSession(){
+async function createSession(){
+  if(roomBusy)return;
   const nameField=document.getElementById('configName');if(nameField)draft.hostName=nameField.value.trim();
   if(!draft.hostName||!draft.avatar){settingsTab='game';configScreen();const identity=document.querySelector('.settings-identity');if(identity)identity.open=true;toast('Choisis ton pseudo et un personnage.','bad');return;}
-  code=genCode(); isHost=true; roomLevel=draft.level; metaRef=db.ref('games/'+code+'/meta');
-  const cfg=normalizeConfig(draft);
-  hostCfg=cfg;
-  metaRef.set({host:uid,phase:'lobby',level:draft.level,cfg:cfg,createdAt:TS}).then(async function(){await reserveIdentity(code,draft.hostName,draft.avatar);joinRoom(draft.hostName,true);}).catch(e=>toast(e.message||'Création impossible.','bad')); }
-function joinSession(name,c){
-  db.ref('games/'+c+'/meta').once('value').then(function(meta){
-    if(!meta.exists()){ toast('Aucune partie avec ce code.','bad'); return; }
-    const m=meta.val(); if(m.phase!=='lobby'){toast('Cette partie a déjà commencé. Reviens avec ton profil pour la reprendre.','bad');return;} const cfg=normalizeConfig(m.cfg||{});
-    const humanSlots=Math.max(0, cfg.nPlayers - (cfg.adminPlays?1:0) - cfg.bots);
-    db.ref('games/'+c+'/players').once('value').then(function(ps){ let taken=false,humans=0; ps.forEach(function(x){ humans++; if(nm(x.val().name)===nm(name)) taken=true; });
-      const joinersNeeded=humanSlots + 1; // host compte aussi dans /players
-      if(taken){ toast('Ce nom est d\u00e9j\u00e0 pris dans la partie.','bad'); return; }
-      if(humans>=joinersNeeded){ toast('La partie est compl\u00e8te.','bad'); return; }
-      if(!joinAvatar){toast('Choisis un personnage.','bad');return;}
-      reserveIdentity(c,name,joinAvatar).then(()=>{code=c; isHost=(m.host===uid); roomLevel=m.level||'normal'; hostCfg=cfg; metaRef=db.ref('games/'+c+'/meta'); joinRoom(name,false);}).catch(e=>{toast(e.message,'bad');refreshAvatarOptions(c);});
-    });
-  }).catch(dbError);
+  roomBusy=true;const op=++roomOperation,room=genCode(),name=draft.hostName,avatar=draft.avatar,level=draft.level,cfg=normalizeConfig(draft),ref=db.ref('games/'+room+'/meta');
+  roomTarget=room;const button=document.getElementById('doCreate');if(button)button.disabled=true;
+  try{
+    await ref.set({host:uid,phase:'lobby',level,cfg,createdAt:TS});if(op!==roomOperation)return;
+    await reserveIdentity(room,name,avatar);if(op!==roomOperation){if(roomTarget!==room&&code!==room)await db.ref('games/'+room+'/players/'+uid).remove();return;}
+    code=room;isHost=true;roomLevel=level;hostCfg=cfg;metaRef=ref;joinRoom(name,true);
+  }catch(e){if(op===roomOperation)toast(e.message||'Création impossible.','bad');}
+  finally{if(op===roomOperation){roomBusy=false;if(button)button.disabled=false;}else if(roomTarget!==room&&code!==room)window.cloudReleaseRoom?.(room);}
+}
+async function joinSession(name,c){
+  if(roomBusy)return;roomBusy=true;const op=++roomOperation,avatar=joinAvatar;
+  roomTarget=c;const button=document.getElementById('doJoin');if(button)button.disabled=true;
+  try{
+    const meta=await db.ref('games/'+c+'/meta').once('value');if(op!==roomOperation)return;
+    if(!meta.exists())throw Error('Aucune partie avec ce code.');
+    const m=meta.val();if(m.phase!=='lobby')throw Error('Cette partie a déjà commencé. Reviens avec ton profil pour la reprendre.');
+    if(!avatar)throw Error('Choisis un personnage.');
+    await reserveIdentity(c,name,avatar);if(op!==roomOperation){if(roomTarget!==c&&code!==c)await db.ref('games/'+c+'/players/'+uid).remove();return;}
+    code=c;isHost=m.host===uid;roomLevel=m.level||'normal';hostCfg=normalizeConfig(m.cfg||{});metaRef=db.ref('games/'+c+'/meta');joinRoom(name,false);
+  }catch(e){if(op===roomOperation){toast(e.message||'Connexion à la salle impossible.','bad');refreshAvatarOptions(c);}}
+  finally{if(op===roomOperation){roomBusy=false;if(button)button.disabled=false;}else if(roomTarget!==c&&code!==c)window.cloudReleaseRoom?.(c);}
 }
 function joinRoom(name,host){
   localStorage.setItem(sessionKey,JSON.stringify({code:code,name:name}));
@@ -1357,23 +1363,28 @@ function joinRoom(name,host){
   metaRef.child('host').on('value',function(s){ const h=s.val(); if(h && h===uid) { if(inGame&&!G) becomeHost(); else isHost=true; } else if(h && h!==uid) { isHost=false; G=null; if(actionsRef) actionsRef.off(); actionsRef=null; } });
   lobbyScreen();refreshAvatarOptions(code);
 }
-function leaveRoom(){ localStorage.removeItem(sessionKey); clearTurnTimer(); if(botTimer) clearTimeout(botTimer); detachAll(); if(meRef){ meRef.onDisconnect().cancel(); meRef.remove(); } code=null; isHost=false; inGame=false; G=null; homeScreen(); }
+async function leaveRoom(){
+  if(leavingRoom)return;leavingRoom=true;
+  try{
+    const oldCode=code;if(meRef){meRef.onDisconnect().cancel();await meRef.remove();}
+    roomOperation++;roomBusy=false;roomTarget=null;localStorage.removeItem(sessionKey);clearTurnTimer();if(botTimer)clearTimeout(botTimer);detachAll();
+    window.cloudReleaseRoom?.(oldCode);code=null;isHost=false;inGame=false;G=null;homeScreen();
+  }catch(e){dbError(e);throw e;}finally{leavingRoom=false;}
+}
 function quitGame(){
-  if(!confirm('Quitter la partie en cours ? Tu ne pourras pas y revenir.')) return;
-  if(isHost && G){
-    const remaining=G.order.filter(function(u){ return u!==uid; });
-    const humans=remaining.filter(function(u){ return !isBotId(u); });
-    if(remaining.length>=2 && humans.length>=1){
-      kickPlayer(uid);                    // me retire de l'ordre + recale + sauvegarde le moteur
-      saveEngine();
-      metaRef.update({host:humans[0]});   // un autre joueur devient organisateur -> la partie continue
-    } else {
-      try{ if(stateRef) stateRef.update({phase:'over', verdict:'Partie termin\u00e9e \u2014 pas assez de joueurs.', winner:null, pendingFigure:null}); }catch(e){}
-    }
-  } else {
-    try{ postAction({type:'leave'}); }catch(e){}   // l'hôte me retire de la partie en cours
-  }
-  leaveRoom();
+  if(document.getElementById('quitPanel'))return;
+  const panel=document.createElement('div');panel.id='quitPanel';panel.className='identity-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Quitter la salle');
+  panel.innerHTML='<div class="identity-card"><h2>Quitter cette salle ?</h2><p>Pour envoyer un message puis revenir, garde ta partie : tu retrouveras ta place au retour.</p><div class="identity-buttons"><button id="stayInGame" class="btn-ghost">Rester dans la partie</button><button id="confirmQuit" class="btn-primary">Quitter la salle</button></div><p id="quitError" role="status"></p></div>';
+  document.body.appendChild(panel);document.getElementById('stayInGame').onclick=()=>panel.remove();
+  document.getElementById('confirmQuit').onclick=async function(){this.disabled=true;try{await quitGameConfirmed();panel.remove();}catch(e){document.getElementById('quitError').textContent=e.message||'Sortie non confirmée, réessaie.';this.disabled=false;}};
+}
+async function quitGameConfirmed(){
+  if(isHost&&G){
+    const remaining=G.order.filter(u=>u!==uid),humans=remaining.filter(u=>!isBotId(u));
+    if(remaining.length>=2&&humans.length>=1){kickPlayer(uid);saveEngine();await metaRef.update({host:humans[0]});}
+    else if(stateRef)await stateRef.update({phase:'over',verdict:'Partie terminée — pas assez de joueurs.',winner:null,pendingFigure:null});
+  }else await db.ref('games/'+code+'/actions/'+Date.now()+'_'+crypto.randomUUID()).set({type:'leave',by:uid,ts:Date.now()});
+  await leaveRoom();
 }
 function detachAll(){ [lobbyPlayersRef,stateRef,privRef,myHandRef,actionsRef].forEach(function(r){ if(r) r.off(); }); if(metaRef){ metaRef.child('phase').off(); metaRef.child('host').off(); } }
 function dbError(e){ console.error('DB ERROR',e); if(e&&e.message&&!e.code){ toast(e.message,'bad'); return; }
@@ -2274,7 +2285,7 @@ function bind(){
   const cc=document.getElementById('copyCode'); if(cc){ const doCopy=function(){ try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(function(){toast('Code copi\u00e9 !','good');},function(){fallbackCopy();}); } else fallbackCopy(); }catch(e){ fallbackCopy(); } };
     function fallbackCopy(){ const ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast('Code copi\u00e9 !','good');}catch(_){ toast('Copie impossible \u2014 note : '+code,'bad'); } document.body.removeChild(ta); }
     cc.onclick=doCopy; const cb=document.getElementById('codeBox'); if(cb) cb.onclick=doCopy; }
-  const lv=document.getElementById('leave'); if(lv){ lv.onclick=leaveRoom; }
+  const lv=document.getElementById('leave'); if(lv){ lv.onclick=()=>leaveRoom().catch(()=>{}); }
 
   /* hôte : retirer un joueur / bot (absent) */
   screen.querySelectorAll('[data-kick]').forEach(function(el){ el.onclick=function(ev){ ev.stopPropagation(); const who=el.dataset.kick;

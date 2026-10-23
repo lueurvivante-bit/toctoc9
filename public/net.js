@@ -145,7 +145,7 @@
     rebuild();
     setStatusSafe('reconnexion…', 'err');
     const delay = Math.min(3000, 300 * Math.pow(2, r.retry++));
-    setTimeout(() => connect(r.code), delay);
+    r.reconnectTimer=setTimeout(() => {if(rooms.get(r.code)===r)connect(r.code);}, delay);
   }
 
   // Abandonne la prise courante sans attendre la fin du handshake de fermeture
@@ -268,6 +268,14 @@
   window.cloudReserveIdentity = async function (room, playerId, name, avatar) {
     const res = await request(room.toUpperCase(), { t: 'identity', name, avatar });
     return { avatars: res.avatars, name: res.name };
+  };
+  window.cloudReleaseRoom=function(code){
+    const r=rooms.get(String(code||'').toUpperCase());if(!r)return;
+    rooms.delete(r.code);clearTimeout(r.live);clearTimeout(r.reconnectTimer);
+    if(r.ws){r.ws.onclose=null;r.ws.onmessage=null;try{r.ws.close(1000,'left');}catch{}}
+    for(const w of r.pending){clearTimeout(w.timer);w.reject(new Error('Partie quittée'));}
+    for(const w of r.waiting.values())w.reject(new Error('Partie quittée'));
+    r.readyFn?.();rebuild();
   };
   window.cloudHeartbeat = async function (room) {
     const r = rooms.get(String(room).toUpperCase());

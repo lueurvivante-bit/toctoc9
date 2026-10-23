@@ -60,3 +60,7 @@ Règle exacte : voir [PRESENCE_SPEC.md](PRESENCE_SPEC.md). Arrière-plan détect
 décompte serveur dix secondes même sans chrono, aucun remplacement par un bot,
 mémorisation préservée et retour sur vue fraîche. Tests moteur/transport et parcours
 WebSocket locaux validés ; non déployé et non vérifié sur téléphone physique.
+
+### 23 octobre — transitions quitter / recréer / rejoindre
+
+Risques constatés dans les gestionnaires : création/entrée non verrouillées (double appui), variables de salle globales réutilisées par une réponse tardive, sortie effaçant la reprise avant confirmation serveur, ancien transport conservé et susceptible de se reconnecter. La confirmation native de sortie bloquait aussi les pilotes navigateur. Correctif : demandes uniques et invalidables, paramètres capturés, sortie confirmée dans la page, attente ACK/retrait, libération du seul transport quitté. Tests et limites : `docs/PRESENCE_SPEC.md`, section Parcours de salle. Aucun test matériel mobile ni campagne Claude complète revendiqué ici.
