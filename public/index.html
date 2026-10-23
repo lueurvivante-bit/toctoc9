@@ -502,7 +502,7 @@
   body[data-theme="galaxy"]{--felt:#191b31;--felt-deep:#0c0e1b;--felt-edge:#05060c;--paper:#ffffff;--paper-shade:#eeeef5;--brass:#f2930b;--brass-soft:#fbdf5e;--muted:#b4b8cf;--good:#88cdb0}
   body[data-theme="impulse"]{--felt:#242424;--felt-deep:#111111;--felt-edge:#050505;--paper:#ffffff;--paper-shade:#ededed;--brass:#f2930b;--brass-soft:#fdc50a;--muted:#bbbbbb;--good:#7bc795}
   body[data-theme="signature"]:not(.home-mode){background:radial-gradient(ellipse at 50% 0%,#f2930b18,transparent 65%),#080706}
-  body[data-theme="galaxy"]:not(.home-mode){background-color:#070813;background-image:radial-gradient(ellipse at 45% 20%,#f2930b0c,transparent 60%),radial-gradient(circle at 16px 24px,#ffffff55 .7px,transparent 1.1px),radial-gradient(circle at 52px 60px,#fbdf5e44 .7px,transparent 1px),radial-gradient(ellipse at 85% 75%,#47527c22,transparent 60%);background-size:auto,83px 103px,149px 163px,auto}
+  body[data-theme="galaxy"]{background-color:#070813;background-image:radial-gradient(ellipse at 45% 20%,#f2930b0c,transparent 60%),radial-gradient(circle at 16px 24px,#ffffff55 .7px,transparent 1.1px),radial-gradient(circle at 52px 60px,#fbdf5e44 .7px,transparent 1px),radial-gradient(ellipse at 85% 75%,#47527c22,transparent 60%);background-size:auto,83px 103px,149px 163px,auto}
   body[data-theme="impulse"]:not(.home-mode){background-color:#101010;background-image:linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px),repeating-linear-gradient(135deg,transparent 0 170px,#f2930b0c 170px 172px);background-size:36px 36px,36px 36px,auto}
   .theme-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
   .theme-choice{display:flex;flex-direction:column;align-items:stretch;gap:9px;min-width:0;padding:11px;text-align:left;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.13);color:var(--paper);font-weight:400;box-shadow:none}
@@ -727,8 +727,30 @@
     .game-root .play-actions{width:34%;height:100%;max-height:none;flex:0 0 34%}
     .game-root .play-surface{height:100%}
   }
+  /* Gameplay is one viewport, including temporary notices and figure actions. */
+  html.game-mode,body.game-mode{height:100%;overflow:hidden;overscroll-behavior:none}
+  #app.game-root{height:var(--play-height,100dvh);min-height:0;overflow:hidden}
+  .game-root #screen>.screen{position:relative;overflow:hidden}
+  .game-root .play-actions{position:relative;box-sizing:border-box;height:clamp(176px,34dvh,250px);max-height:44%;overflow:hidden;padding:0;flex-shrink:0}
+  .result-region{position:relative;flex:1;min-height:0;overflow:hidden}
+  .result-actions{flex:none;padding:4px}.result-actions button{min-height:44px}
+  .game-root .table-content{transform-origin:top left}
+  .action-content,.result-content{position:absolute;top:0;left:0;width:100%;box-sizing:border-box;transform-origin:top left;padding:2px 4px}
+  .game-root .rules-recap{display:none}
+  .game-root .power-call{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px}
+  .game-root .power-call button{min-width:0;white-space:normal}
+  .game-root .play-actions .note{font-size:.75rem;line-height:1.25;padding:4px 6px;margin:3px 0}
+  .game-root .play-actions .game-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+  .game-root .play-actions .game-controls button{min-width:0;padding:6px 3px;white-space:normal}
+  .game-root .play-actions .game-controls button,.game-root .play-actions .actions button{min-height:44px}
+  .game-root .take-hint{font-size:.75rem;line-height:1.25;margin:4px 0}
+  .game-root .absent-note{font-size:.7rem;line-height:1.25;padding:4px;margin:3px 0}
+  @media(orientation:landscape) and (max-height:500px){
+    .game-root .play-actions{height:100%;max-height:none}
+    .game-root .game-controls button{flex-direction:column;gap:0}
+  }
 </style></head>
-<body>
+<body data-theme="galaxy">
 <div class="status" id="status"><span class="d"></span><span id="statusText">connexion…</span></div>
 <div id="app"><div id="screen"></div><div id="snapFeedback" class="snap-feedback" role="status" aria-live="polite"></div></div>
 <div class="toast" id="toast"></div>
@@ -1061,10 +1083,13 @@ function patchRenderNode(current,next){
   for(const child of old)if(!used.has(child)&&child.parentNode===current)current.removeChild(child);
 }
 function fitPlayingTable(){
-  const surface=document.querySelector('.play-surface'),content=surface?.querySelector('.table-content');
-  if(!content)return;
-  const scale=Math.min(1,surface.clientHeight/Math.max(1,content.scrollHeight),surface.clientWidth/Math.max(1,content.scrollWidth));
-  content.style.transform='scale('+scale+')';
+  // Each region fits its own content; action messages never create a scroll area.
+  document.querySelectorAll('.table-content,.action-content,.result-content').forEach(content=>{
+    const region=content.parentElement;
+    const scale=Math.min(1,region.clientHeight/Math.max(1,content.scrollHeight),region.clientWidth/Math.max(1,content.scrollWidth));
+    content.style.transform='scale('+scale+')';
+    content.style.left=((region.clientWidth-content.offsetWidth*scale)/2)+'px';
+  });
 }
 function updatePlayViewport(){document.documentElement.style.setProperty('--play-height',(window.visualViewport?.height||window.innerHeight)+'px');requestAnimationFrame(fitPlayingTable);}
 window.addEventListener?.('resize',updatePlayViewport);window.visualViewport?.addEventListener('resize',updatePlayViewport);
@@ -1078,16 +1103,24 @@ function render(h,anim){
   renderedLayoutKey=layoutKey;renderedMarkup=h;
   const home=h.includes('class="home-lobby"'),app=document.getElementById('app');
   app.classList.toggle('game-root',inGame);if(!inGame)app.classList.remove('table-wide','table-ten');
-  document.body.classList.toggle('home-mode',home);app.classList.toggle('settings-root',h.includes('class="settings-shell"'));
-  document.body.dataset.theme=home?'forest':(inGame?gstate?.theme:(code?hostCfg?.theme:(draft?.theme||hostCfg?.theme)))||'forest';
+  document.body.classList.toggle('home-mode',home);document.body.classList.toggle('game-mode',inGame);document.documentElement.classList.toggle('game-mode',inGame);app.classList.toggle('settings-root',h.includes('class="settings-shell"'));
+  document.body.dataset.theme=home?'galaxy':(inGame?gstate?.theme:(code?hostCfg?.theme:(draft?.theme||hostCfg?.theme)))||'galaxy';
   app.classList.toggle('home-root',home);captureCardPositions();
+  if(inGame){
+    if(h.includes('class="play-surface"'))h=h.replace(/<div class="play-actions">([\s\S]*)<\/div>$/, '<div class="play-actions"><div class="action-content">$1</div></div>');
+    else {
+      const actionAt=h.lastIndexOf('<div class="actions">');
+      const actions=actionAt<0?'':h.slice(actionAt);
+      h='<div class="result-region"><div class="result-content">'+(actionAt<0?h:h.slice(0,actionAt))+'</div></div>'+(actions?'<div class="result-actions">'+actions+'</div>':'');
+    }
+  }
   const markup='<div class="screen'+(inGame||reuse||anim===false?' noanim':'')+'">'+h+'</div>';
   if(reuse){const template=document.createElement('template');template.innerHTML=markup;patchRenderNode(screen.firstElementChild,template.content.firstElementChild);}
   else screen.innerHTML=markup;
   const qb=document.getElementById('leaveGameBtn');if(qb)qb.style.display=inGame?'flex':'none';
   bind();scrollPositions.forEach(([selector,top])=>{const el=document.querySelector(selector);if(el&&el.scrollTop!==top)el.scrollTop=top;});
   requestAnimationFrame(()=>{fitPlayingTable();animateHandLayout();animateCardArrivals();});
-  playingTableObserver?.disconnect();const surface=document.querySelector('.play-surface');if(surface){playingTableObserver?.observe(surface);playingTableObserver?.observe(surface.firstElementChild);updatePlayViewport();}
+  playingTableObserver?.disconnect();if(inGame){document.querySelectorAll('.table-content,.action-content,.result-content').forEach(content=>{playingTableObserver?.observe(content.parentElement);playingTableObserver?.observe(content);});updatePlayViewport();fitPlayingTable();}
   screen.dataset.renderMs=(performance.now()-started).toFixed(1);
 }
 let _renderPending=false, _lastTop='', _praiseTimer=null;
@@ -1256,7 +1289,7 @@ function themeChoices(){
 function normalizeConfig(input={}){
   const bounded=(v,min,max,fallback)=>Number.isFinite(Number(v))?Math.min(max,Math.max(min,Math.trunc(Number(v)))):fallback;
   const level=LEVEL_PRESETS[input.level]?input.level:'normal', preset=LEVEL_PRESETS[level];
-  const botLevel=LEVEL_PRESETS[input.botLevel]?input.botLevel:level,theme=VISUAL_THEMES.some(t=>t.id===input.theme)?input.theme:'forest';
+  const botLevel=LEVEL_PRESETS[input.botLevel]?input.botLevel:level,theme=VISUAL_THEMES.some(t=>t.id===input.theme)?input.theme:'galaxy';
   const handSize=bounded(input.handSize,4,6,4),nPlayers=bounded(input.nPlayers,2,10,2),adminPlays=input.adminPlays!==false;
   return {level,botLevel,theme,nPlayers,handSize,peek:bounded(input.peek,0,handSize,preset.peek),adminPlays,
     bots:bounded(input.bots,0,nPlayers-(adminPlays?1:0),0),snapSkipTurn:typeof input.snapSkipTurn==='boolean'?input.snapSkipTurn:preset.snapSkipTurn,
@@ -1937,8 +1970,8 @@ function renderPeek(){
     +'<h2 style="text-align:center">'+(curPeek()?'Mémorise '+curPeek()+' carte'+(curPeek()>1?'s':''):'Départ sans mémorisation')+'</h2>'
     +'<p class="sub" style="text-align:center">'+(curPeek()?'Tu as '+(gstate.handSize||4)+' cartes. Choisis '+curPeek()+' carte'+(curPeek()>1?'s différentes, visibles':' différente, visible')+' trois secondes chacune.':'Tu as '+(gstate.handSize||4)+' cartes cachées. Aucune à regarder : confirme pour commencer.')+'</p>'
     +'<div class="seatrow" style="margin-top:18px;'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+slots+'</div></div>'
-    +configDetails(gstate,true)
-    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div>'+absentNote()+'</div>');
+    +configDetails(gstate,true)+absentNote()
+    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
 }
 const PLAYER_PALETTE=[
   ['#e8bf50','#fff0b0'],['#579ded','#b7daff'],['#42cbbb','#a4f3e8'],['#8056bf','#e0c5ff'],['#df6669','#ffc7c9'],
@@ -2025,7 +2058,7 @@ function renderTurn(){
   let bar = fig ? (fig.by===uid?'<div class="turnbar me">\u2728 Ton pouvoir : '+(fig.reward?'Récompense de prise':fig.rank==='J'?'Valet':fig.rank==='Q'?'Dame':'Roi')+'</div>'
                                  :'<div class="turnbar them">'+nameOf(fig.by)+' utilise une figure\u2026</div>')
                 : '<div class="turnbar '+(myTurn?'me':'them')+'">'+(myTurn?'À toi de jouer':nameOf(cur)+' joue')+' <span class="next-turn">→ ensuite '+(nextPlayer===uid?'toi':nameOf(nextPlayer))+'</span>'+(gstate.turnTimer?'<span id="tdc" class="tdc"></span>':'')+'</div>';
-  bar+=absentNote();
+  // Presence notices belong to the table, never between essential controls.
   /* tapis central : pioche + (carte piochée) + défausse */
   const deckCnt=gstate.deckCount||0;
   const deckLive=(myTurn&&!myDrawn&&!fig);
@@ -2064,6 +2097,7 @@ function renderTurn(){
   render('<div class="play-surface"><div class="table-content"><div class="eyebrow center">manche '+gstate.round+'</div>'
     +(gstate.order.length>=5?'':scoresBar())
     +turnOrderBar()
+    +absentNote()
     +opp
     +feltMid
     +'<div class="seatrow'+(myTurn?' active':'')+'" style="'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+(myCards||'<span class="muted">tu arbitres</span>')+'</div></div>'

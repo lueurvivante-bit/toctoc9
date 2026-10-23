@@ -36,7 +36,7 @@ const st=JSON.stringify(store.get('games/ABCD/state'));
 if(st.includes('"deck"')||st.includes('"_drawn"'))throw Error('fuite dans l’état public');
 console.log('Moteur serveur : lancement, mémorisation, pioche, défausse, prise visée (périmée/double appui), aucune carte cachée dans l’état public OK');
 // Les nouvelles ambiances doivent traverser la configuration et l’état public de salle.
-for(const theme of ['forest','signature','galaxy','impulse']){
+for(const theme of [undefined,'forest','signature','galaxy','impulse']){
  const localStore=new Store(()=>{}),runtime=createRuntime({firebase:serverFirebase(localStore),setTimeout,clearTimeout});
  const meta={host:'h',phase:'lobby',cfg:{theme,nPlayers:2,bots:0,handSize:4,peek:1,adminPlays:true}};
  localStore.ref('games/THEM/meta').set(meta);
@@ -45,7 +45,7 @@ for(const theme of ['forest','signature','galaxy','impulse']){
  runtime.attach('THEM','h');const error=runtime.launch('h',players,meta,{});if(error)throw Error(error);
  await new Promise(r=>setTimeout(r,10));
  const state=localStore.get('games/THEM/state');
- if(state.theme!==theme||state.phase!=='peek'||state.order.length!==2)throw Error('ambiance non transmise '+theme);
+ if(state.theme!==(theme||'galaxy')||state.phase!=='peek'||state.order.length!==2)throw Error('ambiance non transmise '+theme);
  if(localStore.get('games/THEM/hands/h').filter(Boolean).length!==4)throw Error('ambiance change les cartes');
 }
 console.log('Ambiances casino/signature/galaxie/impulsion : configuration transmise à la table, distribution inchangée OK');
