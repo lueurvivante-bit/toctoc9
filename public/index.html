@@ -1851,7 +1851,7 @@ function renderPeek(){
     +'<p class="sub" style="text-align:center">'+(curPeek()?'Tu as '+(gstate.handSize||4)+' cartes. Choisis '+curPeek()+' carte'+(curPeek()>1?'s différentes, visibles':' différente, visible')+' trois secondes chacune.':'Tu as '+(gstate.handSize||4)+' cartes cachées. Aucune à regarder : confirme pour commencer.')+'</p>'
     +'<div class="seatrow" style="margin-top:18px;'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+slots+'</div></div>'
     +configDetails(gstate,true)
-    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
+    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
 }
 const PLAYER_PALETTE=[
   ['#e8bf50','#fff0b0'],['#579ded','#b7daff'],['#42cbbb','#a4f3e8'],['#8056bf','#e0c5ff'],['#df6669','#ffc7c9'],
@@ -2262,9 +2262,9 @@ function bind(){
     let seen=peekProgress();
     peekDoneN=seen.length;
     for(const until of Object.values(peekRevealTimes()))if(until>Date.now())setTimeout(()=>{if(inGame&&gstate?.phase==='peek'&&peekStorageKey()===peekKey)scheduleRender();},until-Date.now()+10);
-    screen.querySelectorAll('[data-peek]').forEach(function(el){ el.onclick=function(){ if((gstate.peekDone&&gstate.peekDone[uid])||seen.includes(+el.dataset.peek)||peekDoneN>=curPeek())return; const i=+el.dataset.peek; if(!myHand||!myHand[i])return; el.innerHTML='<div class="flip-in">'+cardFace(myHand[i])+'</div>'; playSfx('peek'); buzz(6); el.dataset.v='1'; peekDoneN++; seen.push(i); localStorage.setItem(peekKey,JSON.stringify(seen));const visible=peekRevealTimes();visible[i]=Date.now()+3000;localStorage.setItem(peekKey+':visible',JSON.stringify(visible)); pd.disabled=seen.length<curPeek(); setTimeout(function(){if(inGame&&gstate?.phase==='peek'&&peekStorageKey()===peekKey)scheduleRender();},3000); }; });
+    screen.querySelectorAll('[data-peek]').forEach(function(el){ el.onclick=function(){ if((gstate.peekDone&&gstate.peekDone[uid])||seen.includes(+el.dataset.peek)||peekDoneN>=curPeek())return; const i=+el.dataset.peek; if(!myHand||!myHand[i])return; el.innerHTML='<div class="flip-in">'+cardFace(myHand[i])+'</div>'; playSfx('peek'); buzz(6); el.dataset.v='1'; peekDoneN++; seen.push(i); localStorage.setItem(peekKey,JSON.stringify(seen));const visible=peekRevealTimes();visible[i]=Date.now()+3000;localStorage.setItem(peekKey+':visible',JSON.stringify(visible)); pd.disabled=seen.length<curPeek();pd.textContent=pd.disabled?'Regarde encore '+(curPeek()-seen.length)+' carte(s)':"J’ai mémorisé"; setTimeout(function(){if(inGame&&gstate?.phase==='peek'&&peekStorageKey()===peekKey)scheduleRender();},3000); }; });
     screen.querySelectorAll('[data-peek]').forEach(el=>{el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};});
-    pd.onclick=function(){ if(seen.length<curPeek()||(gstate.peekDone&&gstate.peekDone[uid]))return; db.ref('games/'+code+'/state/peekDone/'+uid).set(true); toast('Pr\u00eat !','good'); playSfx('flip'); };
+    pd.onclick=function(){ if(seen.length<curPeek()||(gstate.peekDone&&gstate.peekDone[uid]))return; db.ref('games/'+code+'/state/peekDone/'+uid).set(true).catch(dbError); toast('Pr\u00eat !','good'); playSfx('flip'); };
     return;
   }
   const dr=document.getElementById('draw'); if(dr) dr.onclick=function(){ snapMode=false; playSfx('draw'); buzz(8); postAction({type:'draw'}); };
