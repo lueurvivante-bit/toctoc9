@@ -20,7 +20,8 @@ async function create(index){current=('T'+randomUUID().replace(/-/g,'')).slice(0
 try{
  await create(1);await h.action('launch');await until(()=>p.view.state?.phase==='peek','mémorisation');
  p.active(false);await until(()=>h.view.state?.absent?.[p.uid],'absence visible');const deadline=h.view.state.absent[p.uid].deadline;
- assert.ok(deadline-Date.now()>8500&&deadline-Date.now()<=10000);
+ // L'horloge distante peut avancer de quelques millisecondes sur celle du client.
+ assert.equal(deadline-h.view.state.absent[p.uid].since,10000);
  await h.write('state/peekDone/'+h.uid,true);await pause(10500);assert.equal(h.view.state.phase,'peek');assert.ok(!h.view.state.peekDone?.[p.uid]);
  console.log('Mémorisation interrompue >10 s : quota/validation conservés, aucune auto-mémorisation.');
  p.close();await p.open(current);await until(()=>!h.view.state?.absent?.[p.uid],'retour');await p.write('state/peekDone/'+p.uid,true);await until(()=>h.view.state?.phase==='turn','début');
