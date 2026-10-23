@@ -1,13 +1,13 @@
 const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
 function client(){
- let id=0;const timers=new Map(),sockets=[],memory=new Map(),classes=new Set(),notices=[];
+ let id=0;const timers=new Map(),sockets=[],memory=new Map(),classes=new Set(),notices=[],events={document:{},window:{}};
  class WS {constructor(){this.readyState=1;sockets.push(this);}send(m){this.sent??=[];this.sent.push(JSON.parse(m));}close(){this.readyState=3;this.onclose?.();}}
- const ctx={window:{},location:{search:'',origin:'https://test.local'},URLSearchParams,crypto:require('node:crypto').webcrypto,structuredClone,console,Date,Map,Set,Promise,queueMicrotask,WebSocket:WS,
- localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)},document:{body:{classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)}}},setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:i=>timers.delete(i),setStatus(){},toast:m=>notices.push(m)};
+ const ctx={window:{addEventListener:(name,fn)=>{events.window[name]=fn;}},location:{search:'',origin:'https://test.local'},URLSearchParams,crypto:require('node:crypto').webcrypto,structuredClone,console,Date,Map,Set,Promise,queueMicrotask,WebSocket:WS,
+ localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)},document:{visibilityState:'visible',addEventListener:(name,fn)=>{events.document[name]=fn;},body:{classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)}}},setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:i=>timers.delete(i),setStatus(){},toast:m=>notices.push(m)};
  vm.runInNewContext(fs.readFileSync('public/net.js','utf8'),ctx);
  const run=ms=>{for(const [i,t]of [...timers])if(t.ms===ms){timers.delete(i);t.fn();}};
  const recv=(ws,m)=>ws.onmessage?.({data:JSON.stringify(m)});
- return {ctx,sockets,classes,notices,run,recv,expire(){run(8000);},reconnect(){run(300);run(600);return sockets.at(-1);},
+ return {ctx,sockets,classes,notices,events,run,recv,expire(){run(8000);},reconnect(){run(300);run(600);return sockets.at(-1);},
   hello(extra){const ws=sockets.at(-1);ws.onopen();recv(ws,Object.assign({t:'hello'},extra));return ws;}};
 }
 (async()=>{
@@ -86,5 +86,23 @@ function client(){
   const old=client();old.ctx.window.firebase.database().ref('games/TEST/state').on('value',()=>{});
   const wsOld=old.hello();old.run(15000);assert.ok(!(wsOld.sent||[]).some(m=>m.t==='ping'));
  }
+ // Mise en arrière-plan : signal explicite ; retour : identité conservée et vue fraîche.
+ {
+  const c=client(),db=c.ctx.window.firebase.database();let turn;
+  db.ref('games/TEST/state').on('value',s=>{turn=s.val()?.turn;});
+  const ws=c.hello({pong:true}),identity=ws.sent[0];c.recv(ws,{t:'view',d:{state:{turn:1}}});
+  c.ctx.document.visibilityState='hidden';c.events.document.visibilitychange();
+  assert.equal(ws.sent.at(-1).t,'presence');assert.equal(ws.sent.at(-1).active,false);
+  c.ctx.document.visibilityState='visible';c.events.document.visibilitychange();
+  assert.equal(ws.readyState,3);const next=c.reconnect();c.hello({pong:true});
+  assert.equal(next.sent[0].uid,identity.uid);assert.equal(next.sent[0].token,identity.token);
+  assert.equal(next.sent[0].active,true);assert.equal(next.sent[0].presence,true);
+  const early=await db.ref('games/TEST/actions/early').set({type:'draw'}).then(()=>null,e=>e.message);assert.match(early,/reconnecte/);assert.ok(!next.sent.some(m=>m.t==='w'));
+  c.recv(next,{t:'view',d:{state:{turn:2}}});await new Promise(setImmediate);assert.equal(turn,2);
+  await c.ctx.window.cloudHeartbeat('TEST');assert.equal(next.sent.at(-1).active,true);
+  c.events.window.pagehide();assert.equal(next.sent.at(-1).active,false);
+  c.events.window.pageshow({persisted:true});assert.equal(next.readyState,3);
+ }
+ console.log('Arrière-plan, battement visible, pagehide, retour/BFCache : identité et vue de partie préservées OK');
  console.log('Réseau B007 : prise muette remplacée après ACK absent, vue complète, aucune action rejouée, coup suivant confirmé ; mémorisation renvoyée une fois ; vigie ping/pong OK');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -14,6 +14,11 @@
   const listeners = new Set();
   const rooms = new Map();
   let notifyQueued = false, nextId = 1, waitTimer = null;
+  const isActive=()=>document.visibilityState!=='hidden';
+  function signalPresence(resume=false){for(const r of rooms.values()){if(resume&&isActive()){restart(r,'resume');continue;}if(r.ok&&r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:isActive()}));}}
+  document.addEventListener?.('visibilitychange',()=>signalPresence(isActive()));
+  window.addEventListener?.('pagehide',()=>{for(const r of rooms.values())if(r.ok&&r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:false}));});
+  window.addEventListener?.('pageshow',e=>{if(e.persisted)signalPresence(true);});
   // Délais réseau. Une prise WebSocket peut rester « ouverte » sans plus rien
   // transmettre (téléphone en veille, changement de réseau) : on la remplace.
   const ACK_MS = 8000, IDLE_MS = 15000, PONG_MS = 5000;
@@ -88,8 +93,8 @@
       rooms.set(code, r);
     }
     const ws = new WebSocket(SERVER + '/ws?room=' + encodeURIComponent(code));
-    r.ws = ws;
-    ws.onopen = () => { ws.send(JSON.stringify({ t: 'hello', uid: identity, token: secret })); };
+    r.ws = ws;r.syncing=true;
+    ws.onopen = () => { ws.send(JSON.stringify({ t: 'hello', uid: identity, token: secret, active:isActive(), presence:true })); };
     ws.onmessage = (ev) => {
       if (r.ws !== ws) return; // message tardif d'une ancienne prise
       const m = JSON.parse(ev.data);
@@ -99,6 +104,7 @@
         r.pong = !!m.pong; if (r.pong) watch(r, ws);
         for (const w of r.pending) ws.send(JSON.stringify(w.msg));
       } else if (m.t === 'view') {
+        r.syncing=false;
         const d = m.d;
         for (const [k, v] of Object.entries(d)) {
           if (k === 'myHand') { r.server.hands = v == null ? {} : { [identity]: v }; }
@@ -181,6 +187,7 @@
     if (!code) return Promise.reject(new Error('chemin invalide'));
     const r = connect(code);
     const isAction = keysOf(path)[2] === 'actions';
+    if(isAction&&r.loaded&&r.syncing)return Promise.reject(new Error('La partie se reconnecte. Réessaie dans un instant.'));
     const msg = { t: 'w', id: nextId++, path: 'games/' + code + '/' + keysOf(path).slice(2).join('/'), op, value: value === undefined ? null : structuredClone(value) };
     return new Promise((resolve, reject) => {
       const w = { msg, path: msg.path.slice(('games/' + code).length + 1), op, value: msg.value, resolve, reject, action: isAction };
@@ -265,6 +272,7 @@
   window.cloudHeartbeat = async function (room) {
     const r = rooms.get(String(room).toUpperCase());
     if (!r || !r.ok) throw new Error('hors ligne');
+    if(r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:isActive()}));
     return { seen: {} };
   };
 })();

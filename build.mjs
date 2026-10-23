@@ -103,7 +103,7 @@ ${script}
       return null;
     },
     // Joueur absent : jamais joué par un bot. Voir hostPresenceTick dans public/index.html.
-    presenceTick(seen) { hostPresenceTick(seen); },
+    presenceTick(seen,inactiveSince) { hostPresenceTick(seen,inactiveSince); },
   };
 }
 `;

@@ -28,6 +28,7 @@ export class Room extends DurableObject {
     super(ctx, env);
     this.sockets = new Set();
     this.seen = {};
+    this.inactiveSince = {};
     this.tokens = {};
     this.born = Date.now();
     this.code = null;
@@ -60,9 +61,9 @@ export class Room extends DurableObject {
     this.ensureEngine();
     const [client, server] = Object.values(new WebSocketPair());
     server.accept();
-    const conn = { ws: server, uid: null, last: {}, acks: [] };
+    const conn = { ws: server, uid: null, active:true, last: {}, acks: [] };
     server.addEventListener('message', (ev) => this.onMessage(conn, ev.data));
-    const bye = () => { this.sockets.delete(conn); if (conn.uid) this.seen[conn.uid] = Date.now(); if (!this.sockets.size) this.stopTick(); };
+    const bye = () => { this.sockets.delete(conn); if(conn.uid&&!Array.from(this.sockets).some(c=>c.uid===conn.uid&&c.active)){this.inactiveSince[conn.uid]??=Date.now();} if (!this.sockets.size) this.stopTick(); };
     server.addEventListener('close', bye);
     server.addEventListener('error', bye);
     return new Response(null, { status: 101, webSocket: client });
@@ -75,7 +76,8 @@ export class Room extends DurableObject {
     try { m = JSON.parse(raw); } catch (e) { return; }
     if (m.t === 'hello') return this.hello(conn, m);
     if (!conn.uid) return this.send(conn, { t: 'error', reason: 'non identifié' });
-    this.seen[conn.uid] = Date.now();
+    if(m.t==='presence'){conn.aware=true;conn.active=m.active===true;if(conn.active){this.seen[conn.uid]=Date.now();delete this.inactiveSince[conn.uid];}else if(!Array.from(this.sockets).some(c=>c!==conn&&c.uid===conn.uid&&c.active)){this.inactiveSince[conn.uid]??=Date.now();}this.presence();return;}
+    if(conn.active)this.seen[conn.uid] = Date.now();
     // Vigie du client : prouve que la prise transmet encore dans les deux sens.
     if (m.t === 'ping') return this.send(conn, { t: 'pong' });
     if (m.t === 'w') return this.clientWrite(conn, m);
@@ -88,8 +90,8 @@ export class Room extends DurableObject {
     // Un identifiant de joueur est lié à son jeton secret : personne ne peut se faire passer pour lui.
     if (this.tokens[uid] && this.tokens[uid] !== token) return this.send(conn, { t: 'error', reason: 'identité déjà utilisée' });
     this.tokens[uid] = token;
-    conn.uid = uid;
-    this.seen[uid] = Date.now();
+    conn.uid = uid;conn.active=m.active!==false;conn.aware=m.presence===true;
+    if(conn.active){this.seen[uid]=Date.now();delete this.inactiveSince[uid];}else{this.inactiveSince[uid]??=Date.now();}
     this.sockets.add(conn);
     this.startTick();
     this.send(conn, { t: 'hello', ok: true, now: Date.now(), pong: true });
@@ -259,14 +261,16 @@ export class Room extends DurableObject {
 
   presence() {
     const now = Date.now();
-    for (const c of this.sockets) if (c.uid) this.seen[c.uid] = now;
+    for(const c of this.sockets)if(c.uid&&c.active&&!c.aware)this.seen[c.uid]=now;
+    const active=new Set(Array.from(this.sockets).filter(c=>c.uid&&c.active&&(!c.aware||now-(this.seen[c.uid]||0)<3000)).map(c=>c.uid));
     const g = this.game(), meta = g.meta;
+    for(const u of Object.keys(g.players||{})){if(active.has(u))delete this.inactiveSince[u];else this.inactiveSince[u]??=this.seen[u]||now;}
     if (!meta) return;
     const next = electHost(meta, g.players, this.seen, now, this.born);
     if (next) {
       this.store.write(this.base() + '/meta', 'update', { host: next });
       this.runtime.setHost(next);
     }
-    try { this.runtime.presenceTick(this.seen); } catch (e) { console.error('presence', e); }
+    try { this.runtime.presenceTick(this.seen,this.inactiveSince); } catch (e) { console.error('presence', e); }
   }
 }

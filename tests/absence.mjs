@@ -24,53 +24,36 @@ async function room({turnTimer,adminPlays=true,creator='h',by='h'}){
 }
 const away=(...live)=>{const now=Date.now(),seen={h:now-20000,p:now-20000,q:now-20000};live.forEach(u=>seen[u]=now);return seen;};
 
-// 1. Sans chrono : mémorisation attendue, puis tour attendu (aucun coup joué à sa place).
-{
- const r=await room({turnTimer:false});
+// Absence indépendante du chrono : affichage immédiat, grâce 10 s, aucun bot.
+for(const turnTimer of [false,true]){
+ const r=await room({turnTimer});
  r.store.ref(r.base+'/state/peekDone/p').set(true);await tick();
- for(let i=0;i<5;i++){r.rt.presenceTick(away('p'));await tick();}
- r.rt.G._peekStart=Date.now()-60000;r.rt.presenceTick(away('p'));await tick();
- assert.equal(r.s().phase,'peek','sans chrono, la mémorisation attend l’absent');
- assert.ok(!r.s().peekDone.h,'mémorisation validée à la place de l’absent');
- assert.deepEqual(r.s().absent,{h:true},'absence non publiée');
- r.rt.presenceTick(away('h','p'));await tick();assert.deepEqual(r.s().absent,{},'retour non publié');
+ const start=Date.now();r.rt.presenceTick(away('p'),{h:start});await tick();
+ assert.equal(r.s().absent.h.deadline,start+10000,'délai serveur incorrect');
+ r.rt.presenceTick(away('p'),{h:start-11000});await tick();
+ assert.equal(r.s().phase,'peek','mémorisation validée à la place de l’absent');
+ assert.ok(!r.s().peekDone.h);
+ r.rt.presenceTick(away('h','p'),{});await tick();assert.deepEqual(r.s().absent,{});
  r.store.ref(r.base+'/state/peekDone/h').set(true);await tick();
- assert.equal(r.s().phase,'turn');
- const cur=r.s().order[r.s().turnIndex],other=cur==='h'?'p':'h',hand=JSON.stringify(r.store.get(r.base+'/hands/'+cur));
- r.rt.G.turnNumber=40;
- for(let i=0;i<20;i++){r.rt.presenceTick(away(other));await tick();}
- assert.equal(r.s().phase,'turn','TOC joué à la place de l’absent');
- assert.equal(r.s().order[r.s().turnIndex],cur,'tour joué ou passé à la place de l’absent');
- assert.ok(!r.store.get(r.base+'/private/'+cur+'/drawn'),'pioche faite à la place de l’absent');
- assert.equal(JSON.stringify(r.store.get(r.base+'/hands/'+cur)),hand,'main modifiée pendant l’absence');
- assert.equal(r.timers.filter(t=>!t.dead&&t.ms===5300).length,0,'chrono armé sans option chrono');
- r.rt.action({type:'draw',by:cur,ts:Date.now()});await tick();
- assert.ok(r.store.get(r.base+'/private/'+cur+'/drawn'),'le joueur revenu ne peut pas reprendre');
-}
-console.log('Sans chrono : l’absent n’est pas joué par un bot, la partie l’attend et il reprend OK');
-
-// 2. Avec chrono : mémorisation validée après la durée du chrono, tour passé (pas joué).
-{
- const r=await room({turnTimer:true});
- r.store.ref(r.base+'/state/peekDone/p').set(true);await tick();
- r.rt.presenceTick(away('p'));await tick();
- assert.equal(r.s().phase,'peek','validée avant la fin du chrono');
- r.rt.G._peekStart=Date.now()-5001;r.rt.presenceTick(away('p'));await tick();await tick();
- assert.equal(r.s().phase,'turn','avec chrono, la mémorisation de l’absent doit se valider');
- let cur=r.s().order[r.s().turnIndex];
- if(cur!=='h'){r.rt.action({type:'draw',by:cur,ts:Date.now()});await tick();r.rt.action({type:'discard',by:cur,ts:Date.now()});await tick();}
- assert.equal(r.s().order[r.s().turnIndex],'h');
- const hand=JSON.stringify(r.store.get(r.base+'/hands/h')),turn=r.s().turnNumber,discard=JSON.stringify(r.s().discardTop);
- for(let i=0;i<5;i++){r.rt.presenceTick(away('p'));await tick();}
- assert.equal(r.s().order[r.s().turnIndex],'h','tour joué avant la fin du chrono');
- assert.ok(r.timers.some(t=>!t.dead&&t.ms===5300),'chrono serveur non armé pour l’absent');
- await r.fire(5300);
- assert.equal(r.s().order[r.s().turnIndex],'p','chrono : le tour de l’absent doit passer');
+ const cur=r.s().order[r.s().turnIndex],other=cur==='h'?'p':'h';
+ const hand=JSON.stringify(r.store.get(r.base+'/hands/'+cur)),discard=JSON.stringify(r.s().discardTop),turn=r.s().turnNumber;
+ r.rt.presenceTick(away(other),{[cur]:Date.now()});await tick();
+ assert.equal(r.s().order[r.s().turnIndex],cur,'tour passé avant dix secondes');
+ assert.ok(!r.store.get(r.base+'/private/'+cur+'/drawn'),'bot ayant pioché');
+ if(turnTimer)assert.ok(!r.timers.some(t=>!t.dead&&t.ms===5300),'chrono court resté actif pendant la grâce');
+ r.rt.presenceTick(away(other),{[cur]:Date.now()-11000});await tick();
+ assert.equal(r.s().order[r.s().turnIndex],other,'tour non passé après dix secondes');
  assert.equal(r.s().turnNumber,turn+1);assert.equal(r.s().move.type,'skip');
- assert.equal(JSON.stringify(r.store.get(r.base+'/hands/h')),hand,'main de l’absent modifiée');
- assert.equal(JSON.stringify(r.s().discardTop),discard,'défausse jouée pour l’absent');
+ assert.equal(JSON.stringify(r.store.get(r.base+'/hands/'+cur)),hand,'main modifiée pendant absence');
+ assert.equal(JSON.stringify(r.s().discardTop),discard,'carte jouée pour l’absent');
+ r.rt.presenceTick(away('h','p'),{});await tick();assert.deepEqual(r.s().absent,{});
+ // Reprise : le joueur présent termine son tour, le joueur revenu peut piocher.
+ r.rt.action({type:'draw',by:other});await tick();r.rt.action({type:'discard',by:other});await tick();
+ if(r.s().pendingFigure){r.rt.action({type:'fig_skip',by:other});await tick();}
+ assert.equal(r.s().order[r.s().turnIndex],cur);
+ r.rt.action({type:'draw',by:cur});await tick();assert.ok(r.store.get(r.base+'/private/'+cur+'/drawn'),'reprise impossible');
 }
-console.log('Avec chrono : mémorisation validée au chrono, tour de l’absent passé sans coup joué OK');
+console.log('Avec/sans chrono : absence immédiate, grâce dix secondes, tour passé sans bot, mémorisation préservée, retour jouable OK');
 
 // 3. Organisateur : remplacé pendant l’absence, rendu au créateur à son retour.
 {

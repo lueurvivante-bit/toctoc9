@@ -1140,11 +1140,11 @@ function initFx(){ const b=document.createElement('button'); b.id='muteBtn'; b.c
   setInterval(updateCountdown, 350);
   const resume=function(){ const a=ac(); if(a&&a.state==='suspended') a.resume(); document.removeEventListener('pointerdown',resume); };
   document.addEventListener('pointerdown',resume); }
-function updateCountdown(){ const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
+function updateCountdown(){ document.querySelectorAll('[data-absence-deadline]').forEach(el=>{el.textContent=Math.max(0,Math.ceil((Number(el.dataset.absenceDeadline)-Date.now())/1000));}); const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
  const decision=document.getElementById('powerDecision');
   if(decision && gstate && gstate.pendingFigure){const f=gstate.pendingFigure;decision.textContent=f.accepted?'Pouvoir choisi':('Utiliser ou passer · '+Math.max(0,Math.ceil(((f.decisionDeadline||Date.now()+5000)-Date.now())/1000))+' s');}
   const el=document.getElementById('tdc'); if(!el) return;
-  if(gstate && gstate.turnDeadline){ const s=Math.max(0,Math.ceil((gstate.turnDeadline-Date.now())/1000));
+  if(gstate && gstate.turnDeadline && !gstate.absent?.[gstate.pendingFigure?.by||gstate.order?.[gstate.turnIndex]]){ const s=Math.max(0,Math.ceil((gstate.turnDeadline-Date.now())/1000));
     el.textContent=' \u00b7 \u23f1 '+s+'s'; el.style.color = s<=3 ? 'var(--knock)' : 'var(--brass-soft)'; }
   else { el.textContent=''; } }
 initFx();
@@ -1766,6 +1766,7 @@ function maybeScheduleTurnTimer(){
   if(!isHost||!G||!gstate||gstate.phase!=='turn'||!G.turnTimer){ clearTurnTimer(); return; }
   const who = G._fig ? G._fig.by : G.order[G.turnIndex];   // un pouvoir non r\u00e9solu est aussi chronom\u00e9tr\u00e9
   if(isBotId(who)){ clearTurnTimer(); return; }
+  if(gstate.absent?.[who]){clearTurnTimer();return;}
   const key = who+(G._fig?':fig':':turn');
   if(turnTimerFor===key && turnTimerId) return;            // d\u00e9j\u00e0 arm\u00e9
   clearTurnTimer(); turnTimerFor=key;
@@ -2103,27 +2104,30 @@ function botFigure(id,rank){
   releaseProtection(id,mine);releaseProtection(opp,os);[h[mine],G.hands[opp][os]]=[G.hands[opp][os],h[mine]];
   rememberBot(id,mine,rank==='K'?h[mine]:null);rememberBot(opp,os,null);writeHand(id);writeHand(opp);rememberOpponent(id,opp,os,outgoing);
 }
-/* ====== Joueur absent (exécuté par le serveur, chaque seconde) ======
-   Un humain absent n'est JAMAIS joué par un bot (ni pioche, ni échange, ni TOC).
-   Sans chrono : la partie l'attend (l'organisateur peut le retirer).
-   Avec chrono : le chrono de tour (forceSkip) passe son tour, et la mémorisation
-   est validée pour lui une fois la durée du chrono écoulée. */
+/* Absence : signal d'arrière-plan ou déconnexion, grâce serveur de dix secondes.
+   Aucun bot ne remplace un humain. La mémorisation reste à valider par le joueur. */
 var ABSENT_MS=10000;
-function hostPresenceTick(seen){
+function hostPresenceTick(seen,inactiveSince){
   if(!isHost||!G||!gstate)return;
-  const now=Date.now();
-  const away=u=>{if(isBotId(u))return false;if(seen[u]){if(G.absentSince)delete G.absentSince[u];return now-seen[u]>ABSENT_MS;}G.absentSince=G.absentSince||{};G.absentSince[u]=G.absentSince[u]||now;return now-G.absentSince[u]>ABSENT_MS;};
-  const absent={};if(gstate.phase!=='over')G.order.forEach(u=>{if(away(u))absent[u]=true;});
-  if(JSON.stringify(absent)!==JSON.stringify(gstate.absent||{}))stateRef.update({absent:absent});
-  if(gstate.phase==='peek'&&G.turnTimer){
-    if(G._peekFor!==gstate.peekId){G._peekFor=gstate.peekId;G._peekStart=now;}
-    if(now-G._peekStart>=(G.turnSecs||10)*1000){const done=gstate.peekDone||{};G.order.forEach(u=>{if(absent[u]&&!done[u])db.ref('games/'+code+'/state/peekDone/'+u).set(true);});}
-  }
+  const now=Date.now(),absent={};
+  G.absenceSkipped=G.absenceSkipped||{};
+  if(gstate.phase!=='over')G.order.forEach(u=>{
+    if(isBotId(u))return;
+    const since=inactiveSince?.[u]??((seen[u]&&now-seen[u]>=1000)?seen[u]:null);
+    if(since!=null)absent[u]={since,deadline:since+ABSENT_MS};else delete G.absenceSkipped[u];
+  });
+  if(JSON.stringify(absent)!==JSON.stringify(gstate.absent||{})){G._turnFor=null;pushState({absent});}
+  if(gstate.phase!=='turn')return;
+  const who=G._fig?G._fig.by:G.order[G.turnIndex],a=absent[who];
+  const key=G.round+':'+G.turnNumber+':'+(G._fig?'figure':'turn');
+  if(a&&now>=a.deadline&&G.absenceSkipped[who]!==key){G.absenceSkipped[who]=key;forceSkip(who);}
 }
 function absentNote(){
-  const a=(gstate&&gstate.absent)||{},list=(gstate.order||[]).filter(u=>a[u]&&u!==uid);if(!list.length)return '';
-  const why=gstate.turnTimer?(gstate.phase==='peek'?'validé à la fin du chrono':'tour passé à la fin du chrono'):'la partie l\u2019attend';
-  return '<div class="note center absent-note">'+list.map(u=>nameOf(u)+(isHost?'<button class="kickbtn" data-kick="'+u+'" title="Retirer de la partie">\u2715</button>':'')).join(', ')+(list.length>1?' sont absents':' est absent')+' \u00b7 '+why+'</div>';
+  const a=gstate?.absent||{},list=(gstate?.order||[]).filter(u=>a[u]&&u!==uid);if(!list.length)return '';
+  return '<div class="note center absent-note">'+list.map(u=>{
+    const deadline=a[u].deadline||Date.now(),left=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+    return nameOf(u)+' est inactif actuellement · '+(gstate.phase==='peek'?'mémorisation en attente de son retour':left?'tour passé dans <span data-absence-deadline="'+deadline+'">'+left+'</span> s':'son tour sera passé')+(isHost?'<button class="kickbtn" data-kick="'+u+'" title="Retirer de la partie">✕</button>':'');
+  }).join('<br>')+'</div>';
 }
 // Présence : l'interface signale seulement la connexion ; l'absence est gérée par le serveur.
 setInterval(async function(){
