@@ -29,3 +29,16 @@ pas dix parties jouées dans Safari sur un iPhone réel.
 
 Pour B002/B003 : relever heure, action, phase, taille d’écran et journal local ;
 reproduire avec deux clients WebSocket et vérifier l’action attendue côté serveur.
+
+## Audit navigateur réel du 23 octobre
+
+Dix parties complètes avec deux clients connectés au serveur public et deux
+identités distinctes, sans bot, neuf redémarrages. Viewports contrôlés : hôte
+390×720, invité 260×540. B002/B003 non reproduits pendant cette campagne ;
+ne pas les fermer comme résolus universellement. Aucun avertissement/erreur
+console observé. Preuves : browser-audit-20261023/report.json et captures.
+
+B006 — Reproduit sur l’écran de fin : les deux totaux dépassent la limite,
+le plus petit gagne selon la règle existante, mais le verdict indique que
+tous sont éliminés. Corrigé dans le texte de finishRound/renderOver ; résultat
+et élimination inchangés. Test de régression : 33 contre 43, limite 30.
