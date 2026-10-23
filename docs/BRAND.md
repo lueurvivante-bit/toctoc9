@@ -46,3 +46,9 @@ Empreintes SHA-256 :
 - Charte PDF : `bb116d1547e8dc6590142a29b715b3e371ad1aa61d51aa8c8de28c75e405ef13`.
 - Logo SVG : `9b398c22146f1bd046682203e331feb877a7cdaad6e78a5db1066115c92f147c`.
 - Logo PNG : `f664bc85adf0e18858970131941771899a0d3e1df90767794f901145d6414e64`.
+
+## Publication vérifiée
+
+PR #18 intégrée, révision applicative `2929b76`. Version Cloudflare publiée : `7d47cd70-4cbf-4c8a-9819-d34061f08fa1`. Contrôle public : accueil et SVG/PNG sous `/toctoc/brand/` répondent 200 et correspondent aux fichiers sources ; logo chargé et accroche exacte constatés dans le navigateur à l’adresse officielle. Capture locale `/tmp/toctoc-brand-published.png`. PR #17 avait publié séparément la seule accroche.
+
+Fichiers de l’intégration visuelle : `AGENTS.md`, `README.md`, `docs/BRAND.md`, `docs/brand/LUEURVIVANTE_CHARTE.pdf`, `public/index.html`, `public/brand/lueurvivante-flamme.svg`, `public/brand/lueurvivante-flamme.png`. La source PDF et les logos sont copiés sans modification. Aucun fichier moteur/réseau/routage modifié dans cette intégration ; seules les chaînes HTML d’accueil et ses styles changent dans index.html.
