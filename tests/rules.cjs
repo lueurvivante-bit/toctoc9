@@ -143,6 +143,9 @@ if(G.hands.other[0]?.rank!=='6'||G.takeBlocked?.me||G.hands.me.length!==3||pushe
 snapFixture();doTake('me','other',1,top);
 if(!G.takeBlocked.me||G.hands.me.length!==4)throw Error('matching take, wrong value: penalty expected');
 doTake('me','other',1,top);if(G.hands.me.length!==4)throw Error('double take penalised twice');
+snapFixture();G.round=2;doSnap('me',0,{...top,round:1});
+if(G.hands.me[0]?.rank!=='6'||pushed.length||notices.at(-1)?.takeNotice?.kind!=='stale')throw Error('target from previous round must be stale');
+snapFixture();G.round=2;doSnap('me',0,{...top,round:2});if(G.hands.me[0]!==null)throw Error('same-round target must be judged normally');
 snapFixture();doTake('me','other',0,top);
 if(G.hands.other.filter(Boolean).length!==3||G.discard.at(-1).rank!=='6'||G.discard.at(-1).suit!=='♣'||G.takeBlocked?.me)throw Error('matching take, right value: success expected');
 `,sandbox);

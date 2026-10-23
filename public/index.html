@@ -1069,7 +1069,7 @@ let uid=null, code=null, isHost=false;
 let lobbyPlayersRef=null, meRef=null, metaRef=null, stateRef=null, privRef=null, myHandRef=null, actionsRef=null;
 let gstate=null, myDrawn=null, myLook=null, myHand=null, inGame=false;
 let G=null;                 // mémoire autoritaire (organisateur)
-var snapMode=false, figSel=null, lastPlaced=null, lastFailSeen=0, takeNoticeSeen=0, takePending=false;  // état UI local (étaient implicites → déclarés ici)
+var snapMode=false, snapTarget=null, figSel=null, lastPlaced=null, lastFailSeen=0, takeNoticeSeen=0, takePending=false;  // état UI local (étaient implicites → déclarés ici)
 var botTimer=null, hostCfg=null;  // étaient implicites → ReferenceError au tour du bot ⇒ bot bloqué
 
 /* ====== JUS : son · vibration · confettis · flash ====== */
@@ -1673,6 +1673,7 @@ function addPenaltyCards(player,count){
    Sans champ « top » (ancien client, bot), comportement inchangé. */
 function discardChanged(target){
   if(!target||typeof target!=='object'||target.rank==null)return false;
+  if(target.round!=null&&target.round!==G.round)return true;
   const t=topCard();return !t||t.rank!==target.rank||t.suit!==target.suit;
 }
 const TAKE_NOTICES={stale:'Trop tard : la défausse a changé',repeat:'Prise déjà refusée pour cette carte'};
@@ -1831,7 +1832,9 @@ function postAction(obj){ if(isHost&&G){try{processAction(Object.assign({by:uid,
    tant que le serveur n'a pas répondu (ACK, refus ou délai de net.js). */
 function postTake(obj){
   if(takePending){ toast('Prise en cours…'); return false; }
-  const t=gstate&&gstate.discardTop; if(t) obj.top={rank:t.rank,suit:t.suit};
+  // Carte visée = défausse affichée au moment du clic sur « Prendre » (sinon celle affichée maintenant).
+  const t=snapTarget||(gstate&&gstate.discardTop&&{rank:gstate.discardTop.rank,suit:gstate.discardTop.suit,round:gstate.round});
+  snapTarget=null; if(t) obj.top={rank:t.rank,suit:t.suit,round:t.round};
   takePending=true;
   Promise.resolve(postAction(obj)).then(function(){ takePending=false; },function(){ takePending=false; });
   return true;
@@ -2303,7 +2306,7 @@ function bind(){
   const dp=document.getElementById('deckPile'); if(dp&&dp.classList.contains('deck-live')) dp.onclick=function(){ snapMode=false; playSfx('draw'); buzz(8); postAction({type:'draw'}); };
   const di=document.getElementById('discard'); if(di) di.onclick=function(){ playSfx('discard'); postAction({type:'discard'}); };
   const tc=document.getElementById('toc'); if(tc) tc.onclick=function(){ playSfx('toc'); buzz([18,40,18]); postAction({type:'toc'}); };
-  const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode; playSfx('flip'); renderGame(); };
+  const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode; const t=gstate&&gstate.discardTop; snapTarget=snapMode&&t?{rank:t.rank,suit:t.suit,round:gstate.round}:null; playSfx('flip'); renderGame(); };
   const fa=document.getElementById('figAccept'); if(fa) fa.onclick=function(){fa.disabled=true;postAction({type:'fig_accept'});};
   const fs=document.getElementById('figSkip'); if(fs) fs.onclick=function(){ figSel=null; postAction({type:'fig_skip'}); };
   const fd=document.getElementById('figDone'); if(fd) fd.onclick=function(){ postAction({type:'fig_done'}); };
