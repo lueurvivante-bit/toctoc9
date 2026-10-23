@@ -76,6 +76,8 @@ export class Room extends DurableObject {
     if (m.t === 'hello') return this.hello(conn, m);
     if (!conn.uid) return this.send(conn, { t: 'error', reason: 'non identifié' });
     this.seen[conn.uid] = Date.now();
+    // Vigie du client : prouve que la prise transmet encore dans les deux sens.
+    if (m.t === 'ping') return this.send(conn, { t: 'pong' });
     if (m.t === 'w') return this.clientWrite(conn, m);
     if (m.t === 'identity') return this.identity(conn, m);
   }
@@ -90,7 +92,7 @@ export class Room extends DurableObject {
     this.seen[uid] = Date.now();
     this.sockets.add(conn);
     this.startTick();
-    this.send(conn, { t: 'hello', ok: true, now: Date.now() });
+    this.send(conn, { t: 'hello', ok: true, now: Date.now(), pong: true });
     this.flushConn(conn, true);
     this.persist();
   }
