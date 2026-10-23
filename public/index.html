@@ -1160,7 +1160,7 @@ function closeHomeRoute(){const url=new URL(location.href);url.searchParams.dele
 function homeScreen(){ roomOperation++;roomBusy=false;roomTarget=null;
   let saved=null;try{saved=JSON.parse(localStorage.getItem(sessionKey)||'null');}catch(e){}
   render('<div class="home-lobby">'
-    +'<header class="home-header"><a class="home-signature" href="#" aria-label="Toc Toc, accueil"><span class="signature-star">✳</span><span>LueurVivante<small>LES JEUX QUI NOUS RAPPROCHENT</small></span></a>'+(saved?'<button id="homeResume" class="home-resume">Reprendre <span aria-hidden="true">↗</span></button>':'<span class="home-edition">LE JEU DE CARTES</span>')+'</header>'
+    +'<header class="home-header"><a class="home-signature" href="#" aria-label="Toc Toc, accueil"><span class="signature-star">✳</span><span>LueurVivante<small>LES JEUX QUI NOUS ÉLÈVENT</small></span></a>'+(saved?'<button id="homeResume" class="home-resume">Reprendre <span aria-hidden="true">↗</span></button>':'<span class="home-edition">LE JEU DE CARTES</span>')+'</header>'
     +'<div class="home-main"><section class="home-world" aria-label="Toc Toc"><div class="home-kicker"><span></span> À TOI DE JOUER</div>'
     +'<h1 class="home-title">Toc<span class="title-dot">·</span>Toc<span class="title-stroke" aria-hidden="true"></span></h1>'
 
