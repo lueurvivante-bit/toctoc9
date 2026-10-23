@@ -237,6 +237,7 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
  await vm.runInContext(`(async()=>{
    if(normalizeConfig({}).turnSecs!==10)throw Error('default timer');
    if(normalizeConfig({turnSecs:3}).turnSecs!==5||normalizeConfig({turnSecs:30}).turnSecs!==20||normalizeConfig({turnSecs:17}).turnSecs!==17)throw Error('timer bounds');
+   if(normalizeConfig({}).theme!=='galaxy'||normalizeConfig({theme:'unknown'}).theme!=='galaxy')throw Error('default galaxy');
    for(const theme of VISUAL_THEMES)if(normalizeConfig({theme:theme.id}).theme!==theme.id)throw Error('theme lost');
    isHost=true;uid='host';code='settings';hostCfg={level:'facile',botLevel:'difficile',theme:'midnight',nPlayers:2,bots:1,handSize:6,peek:0,turnTimer:true,turnSecs:17};
    await launchGame([{uid:'host',name:'Hôte'}]);

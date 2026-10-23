@@ -25,7 +25,7 @@ Accroche du jeu choisie par Jonathan : **LES JEUX QUI NOUS ÉLÈVENT**. La signa
 
 ## Application actuelle
 
-Logo officiel sans déformation ni recoloration dans la signature d’accueil, détail de carte d’accueil, favicon et icône de raccourci. Fond d’accueil noir, orange officiel pour l’action principale et les accents, textes blancs/neutres pour le contraste. L’accueil reprend la hiérarchie typographique de la charte avec les remplacements ci-dessus. Les typographies des cartes et du tapis restent celles du jeu pour préserver la lisibilité et la mise en page.
+Logo officiel sans déformation ni recoloration dans la signature d’accueil, détail de carte d’accueil, favicon et icône de raccourci. Fond d’accueil Galaxie par défaut (nuit et étoiles discrètes), orange officiel pour l’action principale et les accents, textes blancs/neutres pour le contraste. L’accueil reprend la hiérarchie typographique de la charte avec les remplacements ci-dessus. Les typographies des cartes et du tapis restent celles du jeu pour préserver la lisibilité et la mise en page.
 
 Les thèmes du tapis, couleurs des joueurs, cartes, alertes et règles conservent leur sens. Aucun logo ajouté au tapis de jeu pour ne pas réduire l’espace des cartes sur téléphone.
 
