@@ -97,3 +97,11 @@ joueur, sans repasser par l’accueil. Refaire depuis l’app Messages (lien ouv
 retour) et depuis Chrome iOS. Vérifier aussi que wss://lueurvivante.fr/toctoc/ws
 s’ouvre (onglet Réseau) et que lueurvivante.fr/toctoc (sans barre) redirige.
 
+
+
+## Publication consolidée après le bilan
+
+Les états « non publié » du bilan ci-dessus décrivent le point d’arrêt antérieur. #6/#7/#8/#9/#12 ont été intégrées par #13, puis publiées avec les compléments #14/#15. Reçu exact et limites : [RELEASE_2026-10-23.md](RELEASE_2026-10-23.md). B002/B003 restent à confirmer sur les téléphones concernés, malgré les reprises réussies en ligne.
+
+- B015 — compteur visible 11/6 s pour un délai serveur 10/5 s, léger décalage d’horloge : affichage borné dans #14, test +50 ms et expiration ; le serveur respectait déjà les durées.
+- B016 — URL `/toctoc?profil=...` sans barre finale non couverte par les anciennes routes exactes, ancienne iframe encore servie : joker final + protection des chemins voisins dans #15 ; contrôle public 308 vers `/toctoc/?profil=...` réussi.
