@@ -1,5 +1,7 @@
 # Toc Toc 9
 
+Identité visuelle : lire [docs/BRAND.md](docs/BRAND.md) et la charte PDF conservée avant toute évolution graphique.
+
 Jeu de cartes multijoueur : mémoire, audace et bluff. Mêmes règles que Toc Toc 8 (version du 21 octobre 2026), nouveau moteur en ligne.
 
 ## Ce qui change par rapport à Toc Toc 8

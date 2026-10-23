@@ -3,11 +3,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
-<title>Toc Toc</title>
+<title>Toc Toc — LueurVivante</title>
+<link rel="icon" type="image/svg+xml" href="brand/lueurvivante-flamme.svg">
+<link rel="apple-touch-icon" href="brand/lueurvivante-flamme.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  :root{--felt:#1f3a36;--felt-deep:#162b28;--felt-edge:#0f1f1d;--paper:#f3ead7;--paper-shade:#e6d8bd;--ink:#23241f;
+  :root{--brand-orange:#f2930b;--brand-black:#000;--brand-white:#fff;--brand-yellow:#fdc50a;--brand-yellow-soft:#fbdf5e;--brand-title-font:"Sequel100Black-75","Arial Black",Arial,sans-serif;--brand-text-font:"Sequel100Black-45",Arial,sans-serif;--felt:#1f3a36;--felt-deep:#162b28;--felt-edge:#0f1f1d;--paper:#f3ead7;--paper-shade:#e6d8bd;--ink:#23241f;
     --brass:#c98a3b;--brass-soft:#e0b673;--knock:#b8402f;--good:#5fae7e;--muted:#8aa39d;--line:rgba(243,234,215,.14)}
   *{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}
   html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}
@@ -385,14 +387,15 @@
   #identityError{font-size:.8rem;color:#ffc7c9;margin-top:10px}
   @media(max-width:399px){.avatar-picker{grid-template-columns:repeat(5,minmax(0,1fr))}.avatar-choice{height:34px;font-size:1.2rem}}
 
-  body.home-mode{background:#102824;color:#f4ead6;background-image:radial-gradient(ellipse at 30% 20%,rgba(80,126,98,.3),transparent 60%),radial-gradient(ellipse at 100% 80%,rgba(15,21,19,.8),transparent 70%)}
+  body.home-mode{background:var(--brand-black);color:var(--brand-white);background-image:radial-gradient(ellipse at 26% 30%,rgba(242,147,11,.07),transparent 58%)}
   .home-mode .status{display:none}
   #app.home-root{max-width:1080px;padding:25px 28px 22px;min-height:100dvh;position:relative}
   .home-mode #snapFeedback{display:none}
   .home-lobby{position:relative;min-height:calc(100dvh - 47px);display:flex;flex-direction:column}
   .home-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-right:28px}
   .home-signature{display:flex;align-items:center;gap:10px;color:var(--paper);text-decoration:none;font-size:.85rem;font-weight:500}
-  .signature-star{color:#e2b973;font-size:28px;line-height:1}
+  .brand-flame{display:block;object-fit:contain;flex:none;width:30px;height:36px}
+  .home-signature{color:var(--brand-white)}
   .home-signature small{display:block;font-size:.45rem;letter-spacing:.15em;color:#a8bbb0;margin-top:4px}
   .home-edition{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.13em;color:#a2b2a5}
   .home-resume{padding:6px 10px;border-radius:30px;background:rgba(243,234,215,.05);color:#e5c286;border:1px solid rgba(224,182,115,.25);font-size:.65rem;font-weight:500;box-shadow:none}
@@ -436,7 +439,7 @@
   .menu-intro p{font-size:.85rem;line-height:1.65;color:#a6bcae;margin-bottom:26px}
   .home-play{display:flex;align-items:center;width:100%;gap:13px;text-align:left;padding:15px 17px;border-radius:12px;margin-top:10px;transition:transform .18s,background .18s;box-shadow:none}
   .home-play:hover{transform:translateY(-2px)}
-  .home-play-primary{background:linear-gradient(115deg,#f0cd86,#d8a454);color:#23392e;border:1px solid #f2d69d;box-shadow:0 5px 0 #866631,0 10px 25px #081e1933}
+  .home-play-primary{background:var(--brand-orange);color:var(--brand-black);border:1px solid var(--brand-orange);box-shadow:0 4px 0 #8c5405}
   .home-play-secondary{margin-top:17px;background:#ffffff05;border:1px solid #c8d6b839;color:#f2e6ca}
   .home-action-icon{width:34px;height:34px;display:grid;place-items:center;border:1px solid currentColor;border-radius:9px;opacity:.8;flex:none}
   .home-action-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
@@ -449,6 +452,22 @@
   .meta-players{color:#b8a16b;font-size:13px}.meta-divider{height:9px;width:1px;background:#8ba18a55;margin:0 2px}
   .home-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #b6c5a522;padding-top:17px;color:#71927e;font-size:.6rem;line-height:1.65}
   .home-footer b{font-weight:400;color:#9bb19e}.footer-suits{font-size:17px;letter-spacing:6px;color:#b6c3a8}.footer-suits i{font-style:normal;color:#b9926d}
+  /* Marque LueurVivante : sources et limites documentées dans docs/BRAND.md. */
+  .home-mode{font-family:var(--brand-text-font)}
+  .home-mode .home-signature,.home-mode .home-title{font-family:var(--brand-title-font);font-weight:900}
+  .home-mode .home-title{font-size:clamp(62px,8vw,98px)}
+  .home-mode .menu-intro h2{font-family:Georgia,serif;font-weight:400}
+
+  .home-mode .home-signature small,.home-edition,.home-kicker,.home-traits,.menu-intro p,.home-learn,.home-meta,.home-footer{color:#b7b7b7}
+  .home-mode .home-title,.home-mode .menu-intro h2,.home-mode .home-play-secondary,.home-mode .home-learn b,.home-mode .home-footer b{color:var(--brand-white)}
+  .home-mode .menu-overline,.home-mode .scene-spark,.home-mode .home-traits i,.home-mode .meta-players{color:var(--brand-orange)}
+  .home-mode .title-dot{color:var(--brand-yellow)}
+  .home-mode .title-stroke{border-color:var(--brand-yellow)}
+  .home-mode .home-kicker>span{background:var(--brand-orange);box-shadow:none}
+  .home-mode .home-play-secondary,.home-mode .home-footer{border-color:#ffffff2e}
+  .home-mode .home-resume{color:var(--brand-orange);border-color:#f2930b66}
+  .home-mode .home-play:focus-visible,.home-mode .home-signature:focus-visible{outline:2px solid var(--brand-orange);outline-offset:4px}
+  .card-door .brand-flame{width:24px;height:30px}
   @keyframes homeFloat{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-7px) rotate(1deg)}}
   @keyframes sparkBreathe{0%,100%{opacity:.35}50%{opacity:.85}}
   @media(max-width:699px){
@@ -1160,13 +1179,13 @@ function closeHomeRoute(){const url=new URL(location.href);url.searchParams.dele
 function homeScreen(){ roomOperation++;roomBusy=false;roomTarget=null;
   let saved=null;try{saved=JSON.parse(localStorage.getItem(sessionKey)||'null');}catch(e){}
   render('<div class="home-lobby">'
-    +'<header class="home-header"><a class="home-signature" href="#" aria-label="Toc Toc, accueil"><span class="signature-star">✳</span><span>LueurVivante<small>LES JEUX QUI NOUS ÉLÈVENT</small></span></a>'+(saved?'<button id="homeResume" class="home-resume">Reprendre <span aria-hidden="true">↗</span></button>':'<span class="home-edition">LE JEU DE CARTES</span>')+'</header>'
+    +'<header class="home-header"><a class="home-signature" href="#" aria-label="Toc Toc, accueil"><img class="brand-flame" src="brand/lueurvivante-flamme.svg" width="30" height="36" alt="Logo LueurVivante"><span>LueurVivante<small>LES JEUX QUI NOUS ÉLÈVENT</small></span></a>'+(saved?'<button id="homeResume" class="home-resume">Reprendre <span aria-hidden="true">↗</span></button>':'<span class="home-edition">LE JEU DE CARTES</span>')+'</header>'
     +'<div class="home-main"><section class="home-world" aria-label="Toc Toc"><div class="home-kicker"><span></span> À TOI DE JOUER</div>'
     +'<h1 class="home-title">Toc<span class="title-dot">·</span>Toc<span class="title-stroke" aria-hidden="true"></span></h1>'
 
     +'<div class="home-scene" aria-hidden="true"><div class="scene-orbit orbit-one"></div><div class="scene-orbit orbit-two"></div><span class="scene-spark spark-one">✦</span><span class="scene-spark spark-two">✧</span><span class="scene-spark spark-three">·</span><div class="scene-float">'
     +'<div class="splash-card splash-back back-left"><i>✦</i></div><div class="splash-card splash-face face-left"><span>A<small>♥</small></span><b>♥</b></div>'
-    +'<div class="splash-card splash-face face-center"><span>K<small>♠</small></span><div class="card-door"><i></i><span>✦</span></div><em>TOC TOC</em><span class="card-corner">K<small>♠</small></span></div>'
+    +'<div class="splash-card splash-face face-center"><span>K<small>♠</small></span><div class="card-door"><i></i><img class="brand-flame" src="brand/lueurvivante-flamme.svg" width="24" height="30" alt=""></div><em>TOC TOC</em><span class="card-corner">K<small>♠</small></span></div>'
     +'<div class="splash-card splash-back back-right"><i>✦</i></div></div><div class="scene-shadow"></div></div>'
     +'<div class="home-traits"><span>Audace</span><i>✦</i><span>Bluff</span><i>✦</i><span>Instinct</span></div></section>'
     +'<section class="home-menu" aria-label="Commencer une partie"><div class="menu-intro"><span class="menu-overline">LA TABLE T’ATTEND</span><h2>On fait une partie ?</h2><p>Invite ta bande, défie les bots.<br>Et garde tes meilleures cartes en tête.</p></div>'
