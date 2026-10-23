@@ -53,3 +53,8 @@ Si le système mobile tue le réseau sans envoyer d’événement, l’absence e
 ## Ce qui reste à valider avant de conclure « corrigé en ligne »
 
 Consolider #7 (entrée sans iframe), #8 (prises) et #12 (réseau, absence, salles), résoudre les contrôles Workers Builds en échec à partir de leurs logs, publier une seule version cohérente et vérifier l’adresse officielle. Refaire les parcours sur téléphones physiques iOS/Android et terminer les dix duels représentatifs si cette campagne est reprise. Les tests locaux et la revue Claude sont favorables ; ils ne prouvent ni publication ni absence universelle de bugs.
+
+
+## Mise à jour après autorisation de publication
+
+Le bilan précédent est conservé comme état de la campagne avant publication. Les corrections ont depuis été réunies dans #13, complétées par #14/#15 et mises en ligne. Le reçu, les hashes des fichiers publics, les parcours navigateur et limites sont dans [RELEASE_2026-10-23.md](RELEASE_2026-10-23.md). Les dix duels ne sont toujours pas achevés et aucun test matériel iPhone/Android n’est revendiqué.
