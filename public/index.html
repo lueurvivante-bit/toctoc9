@@ -1069,8 +1069,8 @@ let uid=null, code=null, isHost=false;
 let lobbyPlayersRef=null, meRef=null, metaRef=null, stateRef=null, privRef=null, myHandRef=null, actionsRef=null;
 let gstate=null, myDrawn=null, myLook=null, myHand=null, inGame=false;
 let G=null;                 // mémoire autoritaire (organisateur)
-var snapMode=false, figSel=null, lastPlaced=null, lastFailSeen=0;  // état UI local (étaient implicites → déclarés ici)
-var botTimer=null, hostCfg=null;  // étaient implicites → ReferenceError au tour du bot ⇒ bot bloqué
+var snapMode=false, snapTarget=null, figSel=null, lastPlaced=null, lastFailSeen=0, takeNoticeSeen=0, takePending=false;
+var botTimer=null, hostCfg=null, roomCreator=null; // Le créateur garde son siège au retour.
 
 /* ====== JUS : son · vibration · confettis · flash ====== */
 let fxMuted=false, AC=null;
@@ -1140,11 +1140,11 @@ function initFx(){ const b=document.createElement('button'); b.id='muteBtn'; b.c
   setInterval(updateCountdown, 350);
   const resume=function(){ const a=ac(); if(a&&a.state==='suspended') a.resume(); document.removeEventListener('pointerdown',resume); };
   document.addEventListener('pointerdown',resume); }
-function updateCountdown(){ const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
+function updateCountdown(){ document.querySelectorAll('[data-absence-deadline]').forEach(el=>{el.textContent=Math.max(0,Math.ceil((Number(el.dataset.absenceDeadline)-Date.now())/1000));}); const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
  const decision=document.getElementById('powerDecision');
   if(decision && gstate && gstate.pendingFigure){const f=gstate.pendingFigure;decision.textContent=f.accepted?'Pouvoir choisi':('Utiliser ou passer · '+Math.max(0,Math.ceil(((f.decisionDeadline||Date.now()+5000)-Date.now())/1000))+' s');}
   const el=document.getElementById('tdc'); if(!el) return;
-  if(gstate && gstate.turnDeadline){ const s=Math.max(0,Math.ceil((gstate.turnDeadline-Date.now())/1000));
+  if(gstate && gstate.turnDeadline && !gstate.absent?.[gstate.pendingFigure?.by||gstate.order?.[gstate.turnIndex]]){ const s=Math.max(0,Math.ceil((gstate.turnDeadline-Date.now())/1000));
     el.textContent=' \u00b7 \u23f1 '+s+'s'; el.style.color = s<=3 ? 'var(--knock)' : 'var(--brass-soft)'; }
   else { el.textContent=''; } }
 initFx();
@@ -1157,7 +1157,7 @@ function genCode(){ const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let
 
 /* ====== Lobby screens ====== */
 function closeHomeRoute(){const url=new URL(location.href);url.searchParams.delete('accueil');history.replaceState(null,'',url);}
-function homeScreen(){
+function homeScreen(){ roomOperation++;roomBusy=false;roomTarget=null;
   let saved=null;try{saved=JSON.parse(localStorage.getItem(sessionKey)||'null');}catch(e){}
   render('<div class="home-lobby">'
     +'<header class="home-header"><a class="home-signature" href="#" aria-label="Toc Toc, accueil"><span class="signature-star">✳</span><span>LueurVivante<small>LES JEUX QUI NOUS RAPPROCHENT</small></span></a>'+(saved?'<button id="homeResume" class="home-resume">Reprendre <span aria-hidden="true">↗</span></button>':'<span class="home-edition">LE JEU DE CARTES</span>')+'</header>'
@@ -1191,6 +1191,7 @@ function rulesScreen(){
     +'</div><div class="actions"><button class="btn-primary" id="rulesBack">Compris</button></div>');
 }
 let draft=null;
+let roomOperation=0,roomBusy=false,leavingRoom=false,roomTarget=null;
 function createScreen(){
   if(!draft) draft={hostName:'',level:'normal',nPlayers:2,handSize:4,peek:1,snapSkipTurn:true,adminPlays:true,bots:0,turnTimer:false,turnSecs:10};
   render('<h2>Cr\u00e9er une session</h2><p class="sub">Choisis le niveau et entre ton pseudo.</p>'
@@ -1327,26 +1328,31 @@ function lobbyKickBot(){
 
 
 /* ====== Lobby network ====== */
-function createSession(){
+async function createSession(){
+  if(roomBusy)return;
   const nameField=document.getElementById('configName');if(nameField)draft.hostName=nameField.value.trim();
   if(!draft.hostName||!draft.avatar){settingsTab='game';configScreen();const identity=document.querySelector('.settings-identity');if(identity)identity.open=true;toast('Choisis ton pseudo et un personnage.','bad');return;}
-  code=genCode(); isHost=true; roomLevel=draft.level; metaRef=db.ref('games/'+code+'/meta');
-  const cfg=normalizeConfig(draft);
-  hostCfg=cfg;
-  metaRef.set({host:uid,phase:'lobby',level:draft.level,cfg:cfg,createdAt:TS}).then(async function(){await reserveIdentity(code,draft.hostName,draft.avatar);joinRoom(draft.hostName,true);}).catch(e=>toast(e.message||'Création impossible.','bad')); }
-function joinSession(name,c){
-  db.ref('games/'+c+'/meta').once('value').then(function(meta){
-    if(!meta.exists()){ toast('Aucune partie avec ce code.','bad'); return; }
-    const m=meta.val(); if(m.phase!=='lobby'){toast('Cette partie a déjà commencé. Reviens avec ton profil pour la reprendre.','bad');return;} const cfg=normalizeConfig(m.cfg||{});
-    const humanSlots=Math.max(0, cfg.nPlayers - (cfg.adminPlays?1:0) - cfg.bots);
-    db.ref('games/'+c+'/players').once('value').then(function(ps){ let taken=false,humans=0; ps.forEach(function(x){ humans++; if(nm(x.val().name)===nm(name)) taken=true; });
-      const joinersNeeded=humanSlots + 1; // host compte aussi dans /players
-      if(taken){ toast('Ce nom est d\u00e9j\u00e0 pris dans la partie.','bad'); return; }
-      if(humans>=joinersNeeded){ toast('La partie est compl\u00e8te.','bad'); return; }
-      if(!joinAvatar){toast('Choisis un personnage.','bad');return;}
-      reserveIdentity(c,name,joinAvatar).then(()=>{code=c; isHost=(m.host===uid); roomLevel=m.level||'normal'; hostCfg=cfg; metaRef=db.ref('games/'+c+'/meta'); joinRoom(name,false);}).catch(e=>{toast(e.message,'bad');refreshAvatarOptions(c);});
-    });
-  }).catch(dbError);
+  roomBusy=true;const op=++roomOperation,room=genCode(),name=draft.hostName,avatar=draft.avatar,level=draft.level,cfg=normalizeConfig(draft),ref=db.ref('games/'+room+'/meta');
+  roomTarget=room;const button=document.getElementById('doCreate');if(button)button.disabled=true;
+  try{
+    await ref.set({host:uid,phase:'lobby',level,cfg,createdAt:TS});if(op!==roomOperation)return;
+    await reserveIdentity(room,name,avatar);if(op!==roomOperation){if(roomTarget!==room&&code!==room)await db.ref('games/'+room+'/players/'+uid).remove();return;}
+    code=room;isHost=true;roomLevel=level;hostCfg=cfg;metaRef=ref;joinRoom(name,true);
+  }catch(e){if(op===roomOperation)toast(e.message||'Création impossible.','bad');}
+  finally{if(op===roomOperation){roomBusy=false;if(button)button.disabled=false;}else if(roomTarget!==room&&code!==room)window.cloudReleaseRoom?.(room);}
+}
+async function joinSession(name,c){
+  if(roomBusy)return;roomBusy=true;const op=++roomOperation,avatar=joinAvatar;
+  roomTarget=c;const button=document.getElementById('doJoin');if(button)button.disabled=true;
+  try{
+    const meta=await db.ref('games/'+c+'/meta').once('value');if(op!==roomOperation)return;
+    if(!meta.exists())throw Error('Aucune partie avec ce code.');
+    const m=meta.val();if(m.phase!=='lobby')throw Error('Cette partie a déjà commencé. Reviens avec ton profil pour la reprendre.');
+    if(!avatar)throw Error('Choisis un personnage.');
+    await reserveIdentity(c,name,avatar);if(op!==roomOperation){if(roomTarget!==c&&code!==c)await db.ref('games/'+c+'/players/'+uid).remove();return;}
+    code=c;isHost=m.host===uid;roomLevel=m.level||'normal';hostCfg=normalizeConfig(m.cfg||{});metaRef=db.ref('games/'+c+'/meta');joinRoom(name,false);
+  }catch(e){if(op===roomOperation){toast(e.message||'Connexion à la salle impossible.','bad');refreshAvatarOptions(c);}}
+  finally{if(op===roomOperation){roomBusy=false;if(button)button.disabled=false;}else if(roomTarget!==c&&code!==c)window.cloudReleaseRoom?.(c);}
 }
 function joinRoom(name,host){
   localStorage.setItem(sessionKey,JSON.stringify({code:code,name:name}));
@@ -1357,23 +1363,28 @@ function joinRoom(name,host){
   metaRef.child('host').on('value',function(s){ const h=s.val(); if(h && h===uid) { if(inGame&&!G) becomeHost(); else isHost=true; } else if(h && h!==uid) { isHost=false; G=null; if(actionsRef) actionsRef.off(); actionsRef=null; } });
   lobbyScreen();refreshAvatarOptions(code);
 }
-function leaveRoom(){ localStorage.removeItem(sessionKey); clearTurnTimer(); if(botTimer) clearTimeout(botTimer); detachAll(); if(meRef){ meRef.onDisconnect().cancel(); meRef.remove(); } code=null; isHost=false; inGame=false; G=null; homeScreen(); }
+async function leaveRoom(){
+  if(leavingRoom)return;leavingRoom=true;
+  try{
+    const oldCode=code;if(meRef){meRef.onDisconnect().cancel();await meRef.remove();}
+    roomOperation++;roomBusy=false;roomTarget=null;localStorage.removeItem(sessionKey);clearTurnTimer();if(botTimer)clearTimeout(botTimer);detachAll();
+    window.cloudReleaseRoom?.(oldCode);code=null;isHost=false;inGame=false;G=null;homeScreen();
+  }catch(e){dbError(e);throw e;}finally{leavingRoom=false;}
+}
 function quitGame(){
-  if(!confirm('Quitter la partie en cours ? Tu ne pourras pas y revenir.')) return;
-  if(isHost && G){
-    const remaining=G.order.filter(function(u){ return u!==uid; });
-    const humans=remaining.filter(function(u){ return !isBotId(u); });
-    if(remaining.length>=2 && humans.length>=1){
-      kickPlayer(uid);                    // me retire de l'ordre + recale + sauvegarde le moteur
-      saveEngine();
-      metaRef.update({host:humans[0]});   // un autre joueur devient organisateur -> la partie continue
-    } else {
-      try{ if(stateRef) stateRef.update({phase:'over', verdict:'Partie termin\u00e9e \u2014 pas assez de joueurs.', winner:null, pendingFigure:null}); }catch(e){}
-    }
-  } else {
-    try{ postAction({type:'leave'}); }catch(e){}   // l'hôte me retire de la partie en cours
-  }
-  leaveRoom();
+  if(document.getElementById('quitPanel'))return;
+  const panel=document.createElement('div');panel.id='quitPanel';panel.className='identity-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Quitter la salle');
+  panel.innerHTML='<div class="identity-card"><h2>Quitter cette salle ?</h2><p>Pour envoyer un message puis revenir, garde ta partie : tu retrouveras ta place au retour.</p><div class="identity-buttons"><button id="stayInGame" class="btn-ghost">Rester dans la partie</button><button id="confirmQuit" class="btn-primary">Quitter la salle</button></div><p id="quitError" role="status"></p></div>';
+  document.body.appendChild(panel);document.getElementById('stayInGame').onclick=()=>panel.remove();
+  document.getElementById('confirmQuit').onclick=async function(){this.disabled=true;try{await quitGameConfirmed();panel.remove();}catch(e){document.getElementById('quitError').textContent=e.message||'Sortie non confirmée, réessaie.';this.disabled=false;}};
+}
+async function quitGameConfirmed(){
+  if(isHost&&G){
+    const remaining=G.order.filter(u=>u!==uid),humans=remaining.filter(u=>!isBotId(u));
+    if(remaining.length>=2&&humans.length>=1){kickPlayer(uid);saveEngine();await metaRef.update({host:humans[0]});}
+    else if(stateRef)await stateRef.update({phase:'over',verdict:'Partie terminée — pas assez de joueurs.',winner:null,pendingFigure:null});
+  }else await db.ref('games/'+code+'/actions/'+Date.now()+'_'+crypto.randomUUID()).set({type:'leave',by:uid,ts:Date.now()});
+  await leaveRoom();
 }
 function detachAll(){ [lobbyPlayersRef,stateRef,privRef,myHandRef,actionsRef].forEach(function(r){ if(r) r.off(); }); if(metaRef){ metaRef.child('phase').off(); metaRef.child('host').off(); } }
 function dbError(e){ console.error('DB ERROR',e); if(e&&e.message&&!e.code){ toast(e.message,'bad'); return; }
@@ -1394,11 +1405,14 @@ function launchGame(players){
   if(!isHost||launchInProgress)return;
   const cfg=normalizeConfig(hostCfg||{nPlayers:players.length,level:roomLevel});
   const hostId=uid;
+  /* Le siège « organisateur » (joueur ou arbitre) revient au créateur de la salle,
+     même si un autre joueur tient le rôle pendant son absence : pas d'échange de rôles. */
+  const seat=(roomCreator&&players.some(function(p){return p.uid===roomCreator;}))?roomCreator:hostId;
   const order=[]; const names={};
-  if(cfg.adminPlays){ order.push(hostId); }
+  if(cfg.adminPlays){ order.push(seat); }
   for(let i=0;i<(cfg.bots||0);i++){ const bid='bot_'+(i+1); order.push(bid); names[bid]='Bot '+(i+1); }
-  players.forEach(function(p){ if(p.uid!==hostId){ order.push(p.uid); names[p.uid]=p.name; } });
-  if(cfg.adminPlays){ const hp=players.filter(function(p){return p.uid===hostId;})[0]; names[hostId]=hp?hp.name:'Toi'; }
+  players.forEach(function(p){ if(p.uid!==seat){ order.push(p.uid); names[p.uid]=p.name; } });
+  if(cfg.adminPlays){ const hp=players.filter(function(p){return p.uid===seat;})[0]; names[seat]=hp?hp.name:'Toi'; }
   if(order.length<2||order.length>cfg.nPlayers||new Set(order).size!==order.length){toast('Il faut entre 2 et '+cfg.nPlayers+' joueurs distincts pour lancer.','bad');return;}
   launchInProgress=true;
   const cleanNames=dedupeNames(order.map(u=>names[u]));order.forEach((u,i)=>names[u]=cleanNames[i]);
@@ -1437,6 +1451,7 @@ function enterGame(){
       if(navigator.vibrate) navigator.vibrate([30,40,30]);
       const ap=document.getElementById('app'); if(ap){ ap.classList.add('shake'); setTimeout(function(){ap.classList.remove('shake');},420); }
     }
+    showTakeNotice(gstate);
     try{ onStateFx(gstate); }catch(e){}
     if(isHost){ hostMaybeAdvance(); maybeScheduleBot(); maybeScheduleTurnTimer(); } scheduleRender(); });
   if(isHost){ actionsRef=db.ref('games/'+code+'/actions'); actionsRef.on('value',consumeActions); }
@@ -1597,8 +1612,8 @@ function processAction(a){
   if(a.type==='restart'){ startNewRound(true); clearAction(); return; }
   if(a.type==='kick'){ if(a.by===G.hostId && a.who && a.who!==G.hostId) kickPlayer(a.who); clearAction(); return; }
   if(a.type==='leave'){ if(a.by!==G.hostId) kickPlayer(a.by); clearAction(); return; }
-  if(a.type==='take'){ doTake(a.by,a.opp,a.slot);clearAction();return;}
-  if(a.type==='snap'){ doSnap(a.by, a.slot); clearAction(); return; }
+  if(a.type==='take'){ doTake(a.by,a.opp,a.slot,a.top);clearAction();return;}
+  if(a.type==='snap'){ doSnap(a.by, a.slot, a.top); clearAction(); return; }
   /* figures : seul le r\u00e9solveur agit */
   if(G._fig){
     if(a.by!==G._fig.by){ clearAction(); return; }
@@ -1667,8 +1682,21 @@ function addPenaltyCards(player,count){
   }
   writeHand(player);return slots;
 }
-function doTake(by,opponent,slot){
+/* Prise visée : snap/take portent la carte de défausse que le joueur voyait (champ « top »).
+   Si la défausse a changé avant le traitement, la prise arrive trop tard : refus SANS pénalité.
+   Sans champ « top » (ancien client, bot), comportement inchangé. */
+function discardChanged(target){
+  if(!target||typeof target!=='object'||target.rank==null)return false;
+  if(target.round!=null&&target.round!==G.round)return true;
+  const t=topCard();return !t||t.rank!==target.rank||t.suit!==target.suit;
+}
+const TAKE_NOTICES={stale:'Trop tard : la défausse a changé',repeat:'Prise déjà refusée pour cette carte'};
+function takeNotice(by,kind){ if(!isBotId(by)&&stateRef) stateRef.update({takeNotice:{by,kind,ts:Date.now()}}); }
+/* Même joueur, même carte de main, même défausse : une seule pénalité (double appui, interface en retard). */
+function snapAttemptKey(slot,card){ const t=topCard(); return (t?t.rank+t.suit:'-')+'#'+G.discard.length+'|'+slot+':'+(card?card.rank+card.suit:'-'); }
+function doTake(by,opponent,slot,target){
   if(!G||!gstate||gstate.phase!=='turn'||G._fig||!G.order.includes(by)||!G.order.includes(opponent)||by===opponent||G.takeBlocked?.[by])return;
+  if(discardChanged(target)){takeNotice(by,'stale');return;}
   const card=G.hands[opponent]?.[slot];
   if(!card||G.protectedCards?.[opponent]?.[slot])return;
   const ts=Date.now(),success=isValidSnap(topCard(),card);
@@ -1692,8 +1720,9 @@ function doTake(by,opponent,slot){
   pushState({move:{type:'penalty',who:penaltyPlayer,slot:slots[0],slots,ts},takeResult:G.takeResult});
   if(!G._fig)scheduleBotSnaps();
 }
-function doSnap(by, slot){
+function doSnap(by, slot, target){
   if(!G || !gstate || gstate.phase!=='turn' || G._fig || !G.hands[by]) return;
+  if(discardChanged(target)){ takeNotice(by,'stale'); return; }
   const card=G.hands[by][slot];
   if(card && isValidSnap(topCard(), card)){
     releaseProtection(by,slot);G.discard.push(card); G.hands[by][slot]=null; rememberBot(by,slot,null); writeHand(by);
@@ -1707,6 +1736,9 @@ function doSnap(by, slot){
     pushState({discardTop:card,move:{type:'snap',who:by,slot:slot,ts:Date.now()}});
     if(!G._fig)scheduleBotSnaps();
   } else {
+    const attempt=snapAttemptKey(slot,card); G.snapFailed=G.snapFailed||{};
+    if(G.snapFailed[by]===attempt){ takeNotice(by,'repeat'); return; }
+    G.snapFailed[by]=attempt;
     const pen=drawCard(); let addedSlot=null; if(pen){ let idx=G.hands[by].indexOf(null); addedSlot=idx>=0?idx:G.hands[by].length; if(idx>=0) G.hands[by][idx]=pen; else G.hands[by].push(pen); if(G.botMemory&&G.botMemory[by]) G.botMemory[by][idx>=0?idx:G.hands[by].length-1]=null; writeHand(by); }
     if(G.snapSkipTurn){ G.skip=G.skip||{}; G.skip[by]=true; }
     const ts=Date.now(); pushState({lastFail:{by:by,ts:ts},move:{type:'penalty',who:by,slot:addedSlot,ts:ts}});
@@ -1720,14 +1752,14 @@ function startNewRound(reset){
              G.order.forEach(function(u){ G.scores[u]=0; }); G.round=1; }
   else { G.round++; }
   const d=dealRound(G.order, G.handSize);
-  G.takeBlocked={};G.protectedCards={};G.takeResult=null;snapMode=false;G.botOpponentMemory={};G.botMemory={}; G.deck=d.deck; G.hands=d.hands; G.discard=d.discard; G.turnIndex=0; G.turnNumber=0; G.knocked=false; G.skip={}; G._drawn=null; G._fig=null;
+  G.takeBlocked={};G.protectedCards={};G.takeResult=null;G.snapFailed={};snapMode=false;G.botOpponentMemory={};G.botMemory={}; G.deck=d.deck; G.hands=d.hands; G.discard=d.discard; G.turnIndex=0; G.turnNumber=0; G.knocked=false; G.skip={}; G._drawn=null; G._fig=null;
   G._turnFor=null; G._turnDeadline=null;
   G.order.forEach(function(u){ writeHand(u); clearPriv(u); });
   const pub={}; G.order.forEach(function(u){ pub[u]={count:G.handSize, slots:d.hands[u].map(function(c){return c?1:0;})}; });
   const peekDone={}; G.order.forEach(function(u){ if(isBotId(u)) peekDone[u]=true; });
   stateRef.update({ phase:'peek', peekId:crypto.randomUUID(), round:G.round, order:G.order, botIds:G.botIds, eliminated:G.eliminated||[],
     turnIndex:0, turnNumber:0, deckCount:d.deck.length, turnDeadline:null,
-    discardTop:d.discard[0], hands:pub, scores:G.scores, knocked:false, peekDone:peekDone, pendingFigure:null, skippedTurns:{}, takeBlocked:{},protectedCards:{},takeResult:null, reveal:null, verdict:null, winner:null });
+    discardTop:d.discard[0], hands:pub, scores:G.scores, knocked:false, peekDone:peekDone, pendingFigure:null, skippedTurns:{}, takeBlocked:{},protectedCards:{},takeResult:null, takeNotice:null, reveal:null, verdict:null, winner:null });
   saveEngine();
 }
 /* ====== BOTS (pilotes par l'organisateur) ====== */
@@ -1763,6 +1795,7 @@ function maybeScheduleTurnTimer(){
   if(!isHost||!G||!gstate||gstate.phase!=='turn'||!G.turnTimer){ clearTurnTimer(); return; }
   const who = G._fig ? G._fig.by : G.order[G.turnIndex];   // un pouvoir non r\u00e9solu est aussi chronom\u00e9tr\u00e9
   if(isBotId(who)){ clearTurnTimer(); return; }
+  if(gstate.absent?.[who]){clearTurnTimer();return;}
   const key = who+(G._fig?':fig':':turn');
   if(turnTimerFor===key && turnTimerId) return;            // d\u00e9j\u00e0 arm\u00e9
   clearTurnTimer(); turnTimerFor=key;
@@ -1809,7 +1842,22 @@ function scheduleBotSnaps(){
     }
   }, botReactionDelay(G.botLevel||G.level));
 }
-function postAction(obj){ if(isHost&&G){try{processAction(Object.assign({by:uid,ts:Date.now()},obj));}catch(e){dbError(e);}return;}db.ref('games/'+code+'/actions/'+Date.now()+'_'+crypto.randomUUID()).set(Object.assign({by:uid,ts:Date.now()},obj)).catch(dbError); }
+function postAction(obj){ if(isHost&&G){try{processAction(Object.assign({by:uid,ts:Date.now()},obj));}catch(e){dbError(e);}return Promise.resolve();}return db.ref('games/'+code+'/actions/'+Date.now()+'_'+crypto.randomUUID()).set(Object.assign({by:uid,ts:Date.now()},obj)).catch(dbError); }
+/* Prendre (snap/take) : joint la carte de défausse affichée et bloque les appuis répétés
+   tant que le serveur n'a pas répondu (ACK, refus ou délai de net.js). */
+function postTake(obj){
+  if(takePending){ toast('Prise en cours…'); return false; }
+  // Carte visée = défausse affichée au moment du clic sur « Prendre » (sinon celle affichée maintenant).
+  const t=snapTarget||(gstate&&gstate.discardTop&&{rank:gstate.discardTop.rank,suit:gstate.discardTop.suit,round:gstate.round});
+  snapTarget=null; if(t) obj.top={rank:t.rank,suit:t.suit,round:t.round};
+  takePending=true;
+  Promise.resolve(postAction(obj)).then(function(){ takePending=false; },function(){ takePending=false; });
+  return true;
+}
+function showTakeNotice(g){
+  const n=g&&g.takeNotice; if(!n||n.by!==uid||!(n.ts>takeNoticeSeen)) return;
+  takeNoticeSeen=n.ts; if(Date.now()-n.ts<8000) toast(TAKE_NOTICES[n.kind]||TAKE_NOTICES.stale);
+}
 
 /* ====== Render game ====== */
 function nameOf(u){ return esc((gstate.names&&gstate.names[u])||'Joueur'); }
@@ -1839,7 +1887,7 @@ function peekRevealTimes(){try{return JSON.parse(localStorage.getItem(peekStorag
 function renderPeek(){
   if(gstate.order.indexOf(uid)<0){
     render('<div class="eyebrow center">manche '+gstate.round+'</div><h2 style="text-align:center">Tu arbitres</h2>'
-      +'<p class="sub" style="text-align:center">Les joueurs m\u00e9morisent leur carte\u2026 la partie va commencer.</p>'); return;
+      +'<p class="sub" style="text-align:center">Les joueurs m\u00e9morisent leur carte\u2026 la partie va commencer.</p>'+absentNote()); return;
   }
   const visible=peekRevealTimes();
   const slots=(myHand||[]).map(function(c,i){const showing=visible[i]>Date.now()&&!gstate.peekDone?.[uid];return '<div class="slot"><div data-peek="'+i+'" role="button" tabindex="0" aria-label="Regarder la carte '+(i+1)+'">'+(showing?cardFace(c):cardBack())+'</div><span class="n">'+(i+1)+'</span></div>'; }).join('');
@@ -1852,7 +1900,7 @@ function renderPeek(){
     +'<p class="sub" style="text-align:center">'+(curPeek()?'Tu as '+(gstate.handSize||4)+' cartes. Choisis '+curPeek()+' carte'+(curPeek()>1?'s différentes, visibles':' différente, visible')+' trois secondes chacune.':'Tu as '+(gstate.handSize||4)+' cartes cachées. Aucune à regarder : confirme pour commencer.')+'</p>'
     +'<div class="seatrow" style="margin-top:18px;'+playerStyle(uid)+'"><button class="self-identity" id="selfIdentity" title="Choisir ton personnage">'+avatarOf(uid)+' '+nameOf(uid)+'</button><div class="hand">'+slots+'</div></div>'
     +configDetails(gstate,true)
-    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div></div>');
+    +'</div></div><div class="play-actions"><div class="actions"><button class="btn-primary" id="peekDone" '+(done||!hasPeeked?'disabled':'')+'>'+(done?'En attente des autres\u2026':!hasPeeked?'Regarde encore '+Math.max(0,curPeek()-peekProgress().length)+' carte(s)':'J\u0027ai m\u00e9moris\u00e9')+'</button></div>'+absentNote()+'</div>');
 }
 const PLAYER_PALETTE=[
   ['#e8bf50','#fff0b0'],['#579ded','#b7daff'],['#42cbbb','#a4f3e8'],['#8056bf','#e0c5ff'],['#df6669','#ffc7c9'],
@@ -1939,6 +1987,7 @@ function renderTurn(){
   let bar = fig ? (fig.by===uid?'<div class="turnbar me">\u2728 Ton pouvoir : '+(fig.reward?'Récompense de prise':fig.rank==='J'?'Valet':fig.rank==='Q'?'Dame':'Roi')+'</div>'
                                  :'<div class="turnbar them">'+nameOf(fig.by)+' utilise une figure\u2026</div>')
                 : '<div class="turnbar '+(myTurn?'me':'them')+'">'+(myTurn?'À toi de jouer':nameOf(cur)+' joue')+' <span class="next-turn">→ ensuite '+(nextPlayer===uid?'toi':nameOf(nextPlayer))+'</span>'+(gstate.turnTimer?'<span id="tdc" class="tdc"></span>':'')+'</div>';
+  bar+=absentNote();
   /* tapis central : pioche + (carte piochée) + défausse */
   const deckCnt=gstate.deckCount||0;
   const deckLive=(myTurn&&!myDrawn&&!fig);
@@ -2099,23 +2148,36 @@ function botFigure(id,rank){
   releaseProtection(id,mine);releaseProtection(opp,os);[h[mine],G.hands[opp][os]]=[G.hands[opp][os],h[mine]];
   rememberBot(id,mine,rank==='K'?h[mine]:null);rememberBot(opp,os,null);writeHand(id);writeHand(opp);rememberOpponent(id,opp,os,outgoing);
 }
-// Presence is independent from screen refreshes. The local server elects a live host.
+/* Absence : signal d'arrière-plan ou déconnexion, grâce serveur de dix secondes.
+   Aucun bot ne remplace un humain. La mémorisation reste à valider par le joueur. */
+var ABSENT_MS=10000;
+function hostPresenceTick(seen,inactiveSince){
+  if(!isHost||!G||!gstate)return;
+  const now=Date.now(),absent={};
+  G.absenceSkipped=G.absenceSkipped||{};
+  if(gstate.phase!=='over')G.order.forEach(u=>{
+    if(isBotId(u))return;
+    const since=inactiveSince?.[u]??((seen[u]&&now-seen[u]>=1000)?seen[u]:null);
+    if(since!=null)absent[u]={since,deadline:since+ABSENT_MS};else delete G.absenceSkipped[u];
+  });
+  if(JSON.stringify(absent)!==JSON.stringify(gstate.absent||{})){G._turnFor=null;pushState({absent});}
+  if(gstate.phase!=='turn')return;
+  const who=G._fig?G._fig.by:G.order[G.turnIndex],a=absent[who];
+  const key=G.round+':'+G.turnNumber+':'+(G._fig?'figure':'turn');
+  if(a&&now>=a.deadline&&G.absenceSkipped[who]!==key){G.absenceSkipped[who]=key;forceSkip(who);}
+}
+function absentNote(){
+  const a=gstate?.absent||{},list=(gstate?.order||[]).filter(u=>a[u]&&u!==uid);if(!list.length)return '';
+  return '<div class="note center absent-note">'+list.map(u=>{
+    const deadline=a[u].deadline||Date.now(),left=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+    return nameOf(u)+' est inactif actuellement · '+(gstate.phase==='peek'?'mémorisation en attente de son retour':left?'tour passé dans <span data-absence-deadline="'+deadline+'">'+left+'</span> s':'son tour sera passé')+(isHost?'<button class="kickbtn" data-kick="'+u+'" title="Retirer de la partie">✕</button>':'');
+  }).join('<br>')+'</div>';
+}
+// Présence : l'interface signale seulement la connexion ; l'absence est gérée par le serveur.
 setInterval(async function(){
   if(!uid||!code)return;
   try{
-    const data=await cloudHeartbeat(code,uid);setStatus('connecté','ok');
-    if(isHost && G && data.revision && data.revision!==window.offlineRevision){window.offlineRevision=data.revision;G=null;await becomeHost();return;}
-    if(!isHost||!G||!gstate)return;
-    const away=u=>{if(isBotId(u))return false;if(data.seen[u]){if(G.absentSince)delete G.absentSince[u];return Date.now()-data.seen[u]>10000;}G.absentSince=G.absentSince||{};G.absentSince[u]=G.absentSince[u]||Date.now();return Date.now()-G.absentSince[u]>10000;};
-    if(gstate.phase==='peek'){
-      for(const u of G.order) if(away(u)) db.ref('games/'+code+'/state/peekDone/'+u).set(true);
-    }
-    if(gstate.phase!=='turn')return;
-    const u=G._fig?G._fig.by:G.order[G.turnIndex];
-    if(!away(u))return;
-    if(G._fig){botFigure(u,G._fig.rank);finishFigure();pushState();}
-    else if(G._drawn){G.discard.push(G._drawn);G._drawn=null;clearPriv(u);advanceTurn();pushState();}
-    else {botMove(u);}
+    await cloudHeartbeat(code,uid);setStatus('connecté','ok');
   }catch(e){setStatus('hors ligne · reprise automatique','err');}
 },1000);
 
@@ -2256,8 +2318,12 @@ function bind(){
   const cc=document.getElementById('copyCode'); if(cc){ const doCopy=function(){ try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(function(){toast('Code copi\u00e9 !','good');},function(){fallbackCopy();}); } else fallbackCopy(); }catch(e){ fallbackCopy(); } };
     function fallbackCopy(){ const ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast('Code copi\u00e9 !','good');}catch(_){ toast('Copie impossible \u2014 note : '+code,'bad'); } document.body.removeChild(ta); }
     cc.onclick=doCopy; const cb=document.getElementById('codeBox'); if(cb) cb.onclick=doCopy; }
-  const lv=document.getElementById('leave'); if(lv){ lv.onclick=leaveRoom; }
+  const lv=document.getElementById('leave'); if(lv){ lv.onclick=()=>leaveRoom().catch(()=>{}); }
 
+  /* hôte : retirer un joueur / bot (absent) */
+  screen.querySelectorAll('[data-kick]').forEach(function(el){ el.onclick=function(ev){ ev.stopPropagation(); const who=el.dataset.kick;
+    const label=(gstate.names&&gstate.names[who])||'ce joueur';
+    if(confirm('Retirer '+label+' de la partie ?')){ playSfx('discard'); postAction({type:'kick',who:who}); } }; });
       const pd=document.getElementById('peekDone');
   if(pd){
     const peekKey=peekStorageKey();
@@ -2273,7 +2339,7 @@ function bind(){
   const dp=document.getElementById('deckPile'); if(dp&&dp.classList.contains('deck-live')) dp.onclick=function(){ snapMode=false; playSfx('draw'); buzz(8); postAction({type:'draw'}); };
   const di=document.getElementById('discard'); if(di) di.onclick=function(){ playSfx('discard'); postAction({type:'discard'}); };
   const tc=document.getElementById('toc'); if(tc) tc.onclick=function(){ playSfx('toc'); buzz([18,40,18]); postAction({type:'toc'}); };
-  const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode; playSfx('flip'); renderGame(); };
+  const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode; const t=gstate&&gstate.discardTop; snapTarget=snapMode&&t?{rank:t.rank,suit:t.suit,round:gstate.round}:null; playSfx('flip'); renderGame(); };
   const fa=document.getElementById('figAccept'); if(fa) fa.onclick=function(){fa.disabled=true;postAction({type:'fig_accept'});};
   const fs=document.getElementById('figSkip'); if(fs) fs.onclick=function(){ figSel=null; postAction({type:'fig_skip'}); };
   const fd=document.getElementById('figDone'); if(fd) fd.onclick=function(){ postAction({type:'fig_done'}); };
@@ -2287,19 +2353,15 @@ function bind(){
       if(fig.rank==='J'){ figSel=null; postAction({type:'fig_look',slot:i}); return; }
       if(fig.rank==='Q'||fig.rank==='K'){ selectExchangeCard('mine',i); return; }
     }
-    if(snapMode){ playSfx('flip'); postAction({type:'snap',slot:i}); snapMode=false; return; }
+    if(snapMode){ snapMode=false; if(postTake({type:'snap',slot:i})) playSfx('flip'); return; }
     const cur=gstate.order[gstate.turnIndex]; if(cur===uid && myDrawn){ lastPlaced=i; playSfx('swap'); buzz(10); postAction({type:'swap',slot:i}); }
   }; });
   /* clic sur cartes ADVERSAIRE (figures Q/K) */
   screen.querySelectorAll('[data-opp]').forEach(function(el){ el.onclick=function(){ const parts=el.dataset.opp.split(':'); const opp=parts[0], os=+parts[1];
-    if(snapMode&&!gstate.takeBlocked?.[uid]){snapMode=false;postAction({type:'take',opp:opp,slot:os});return;}
+    if(snapMode&&!gstate.takeBlocked?.[uid]){snapMode=false;postTake({type:'take',opp:opp,slot:os});return;}
     selectExchangeCard('opp',os,opp);
   }; });
   screen.querySelectorAll('[data-mine],[data-opp]').forEach(el=>{el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};});
-  /* hôte : retirer un joueur / bot */
-  screen.querySelectorAll('[data-kick]').forEach(function(el){ el.onclick=function(ev){ ev.stopPropagation(); const who=el.dataset.kick;
-    const label=(gstate.names&&gstate.names[who])||'ce joueur';
-    if(confirm('Retirer '+label+' de la partie ?')){ playSfx('discard'); postAction({type:'kick',who:who}); } }; });
 }
 
 </script>

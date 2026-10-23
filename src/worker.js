@@ -4,6 +4,8 @@
 import { DurableObject } from 'cloudflare:workers';
 import { createRuntime } from './engine.gen.js';
 import { Store, serverFirebase } from './store.js';
+import { electHost } from './host.js';
+import { route, prefixLocation } from './route.js';
 
 const ROOM_RE = /^[A-Z0-9]{4}$/;
 const ICONS = ['fox', 'bear', 'panda', 'lion', 'tiger', 'koala', 'frog', 'owl', 'monkey', 'penguin', 'unicorn', 'octopus', 'cat', 'dog', 'rabbit', 'mouse', 'wolf', 'chick', 'dragon', 'robot'];
@@ -12,13 +14,21 @@ const ACTIONS = new Set(['launch', 'draw', 'discard', 'swap', 'snap', 'take', 't
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const r = route(url.pathname);
+    if (r.redirect) { url.pathname = r.redirect; return Response.redirect(url.href, 308); }
+    url.pathname = r.path;
     if (url.pathname === '/ws') {
       const room = (url.searchParams.get('room') || '').toUpperCase();
       if (!ROOM_RE.test(room)) return new Response('Salle invalide', { status: 400 });
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket attendu', { status: 426 });
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(request);
     }
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(new Request(url, request));
+    const loc = res.headers.get('Location');
+    if (!r.prefixed || !loc || prefixLocation(loc) === loc) return res;
+    const out = new Response(res.body, res);
+    out.headers.set('Location', prefixLocation(loc));
+    return out;
   },
 };
 
@@ -27,6 +37,7 @@ export class Room extends DurableObject {
     super(ctx, env);
     this.sockets = new Set();
     this.seen = {};
+    this.inactiveSince = {};
     this.tokens = {};
     this.born = Date.now();
     this.code = null;
@@ -59,9 +70,9 @@ export class Room extends DurableObject {
     this.ensureEngine();
     const [client, server] = Object.values(new WebSocketPair());
     server.accept();
-    const conn = { ws: server, uid: null, last: {}, acks: [] };
+    const conn = { ws: server, uid: null, active:true, last: {}, acks: [] };
     server.addEventListener('message', (ev) => this.onMessage(conn, ev.data));
-    const bye = () => { this.sockets.delete(conn); if (conn.uid) this.seen[conn.uid] = Date.now(); if (!this.sockets.size) this.stopTick(); };
+    const bye = () => { this.sockets.delete(conn); if(conn.uid&&!Array.from(this.sockets).some(c=>c.uid===conn.uid&&c.active)){this.inactiveSince[conn.uid]??=Date.now();} if (!this.sockets.size) this.stopTick(); };
     server.addEventListener('close', bye);
     server.addEventListener('error', bye);
     return new Response(null, { status: 101, webSocket: client });
@@ -74,7 +85,10 @@ export class Room extends DurableObject {
     try { m = JSON.parse(raw); } catch (e) { return; }
     if (m.t === 'hello') return this.hello(conn, m);
     if (!conn.uid) return this.send(conn, { t: 'error', reason: 'non identifié' });
-    this.seen[conn.uid] = Date.now();
+    if(m.t==='presence'){conn.aware=true;conn.active=m.active===true;if(conn.active){this.seen[conn.uid]=Date.now();delete this.inactiveSince[conn.uid];}else if(!Array.from(this.sockets).some(c=>c!==conn&&c.uid===conn.uid&&c.active)){this.inactiveSince[conn.uid]??=Date.now();}this.presence();return;}
+    if(conn.active)this.seen[conn.uid] = Date.now();
+    // Vigie du client : prouve que la prise transmet encore dans les deux sens.
+    if (m.t === 'ping') return this.send(conn, { t: 'pong' });
     if (m.t === 'w') return this.clientWrite(conn, m);
     if (m.t === 'identity') return this.identity(conn, m);
   }
@@ -85,11 +99,11 @@ export class Room extends DurableObject {
     // Un identifiant de joueur est lié à son jeton secret : personne ne peut se faire passer pour lui.
     if (this.tokens[uid] && this.tokens[uid] !== token) return this.send(conn, { t: 'error', reason: 'identité déjà utilisée' });
     this.tokens[uid] = token;
-    conn.uid = uid;
-    this.seen[uid] = Date.now();
+    conn.uid = uid;conn.active=m.active!==false;conn.aware=m.presence===true;
+    if(conn.active){this.seen[uid]=Date.now();delete this.inactiveSince[uid];}else{this.inactiveSince[uid]??=Date.now();}
     this.sockets.add(conn);
     this.startTick();
-    this.send(conn, { t: 'hello', ok: true, now: Date.now() });
+    this.send(conn, { t: 'hello', ok: true, now: Date.now(), pong: true });
     this.flushConn(conn, true);
     this.persist();
   }
@@ -108,7 +122,7 @@ export class Room extends DurableObject {
         const v = m.value || {};
         if (meta) throw new Error('Ce code de partie existe déjà.');
         if (v.host !== uid || v.phase !== 'lobby') throw new Error('création invalide');
-        this.store.write(path, 'set', { host: uid, phase: 'lobby', level: String(v.level || 'normal'), cfg: v.cfg || {}, createdAt: Date.now() });
+        this.store.write(path, 'set', { host: uid, creator: uid, phase: 'lobby', level: String(v.level || 'normal'), cfg: v.cfg || {}, createdAt: Date.now() });
         this.ensureEngine();
         this.runtime.setHost(uid);
       } else if (rel[0] === 'meta' && op === 'update') {
@@ -247,7 +261,7 @@ export class Room extends DurableObject {
     }, 1000);
   }
 
-  // ---------- Présence : reprise automatique et organisateur de secours ----------
+  // ---------- Présence : organisateur de secours, rendu au créateur à son retour ----------
   startTick() {
     if (this.tick) return;
     this.tick = setInterval(() => this.presence(), 1000);
@@ -256,16 +270,16 @@ export class Room extends DurableObject {
 
   presence() {
     const now = Date.now();
-    for (const c of this.sockets) if (c.uid) this.seen[c.uid] = now;
+    for(const c of this.sockets)if(c.uid&&c.active&&!c.aware)this.seen[c.uid]=now;
+    const active=new Set(Array.from(this.sockets).filter(c=>c.uid&&c.active&&(!c.aware||now-(this.seen[c.uid]||0)<3000)).map(c=>c.uid));
     const g = this.game(), meta = g.meta;
+    for(const u of Object.keys(g.players||{})){if(active.has(u))delete this.inactiveSince[u];else this.inactiveSince[u]??=this.seen[u]||now;}
     if (!meta) return;
-    if (now - this.born > 10000 && now - (this.seen[meta.host] || 0) > 10000) {
-      const live = Object.keys(g.players || {}).filter((u) => now - (this.seen[u] || 0) < 3000).sort();
-      if (live[0] && live[0] !== meta.host) {
-        this.store.write(this.base() + '/meta', 'update', { host: live[0] });
-        this.runtime.setHost(live[0]);
-      }
+    const next = electHost(meta, g.players, this.seen, now, this.born);
+    if (next) {
+      this.store.write(this.base() + '/meta', 'update', { host: next });
+      this.runtime.setHost(next);
     }
-    try { this.runtime.presenceTick(this.seen); } catch (e) { console.error('presence', e); }
+    try { this.runtime.presenceTick(this.seen,this.inactiveSince); } catch (e) { console.error('presence', e); }
   }
 }

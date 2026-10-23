@@ -6,7 +6,9 @@
     "build": "node build.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node build.mjs && node tests/rules.cjs && node tests/engine.mjs && node tests/soak.mjs && node tests/network.cjs"
+    "test": "node build.mjs && node tests/rules.cjs && node tests/engine.mjs && node tests/soak.mjs && node tests/absence.mjs && node tests/network.cjs && node tests/lifecycle.cjs && node tests/entree.mjs"
   },
-  "devDependencies": { "wrangler": "^4.151.3" }
+  "devDependencies": {
+    "wrangler": "^4.151.3"
+  }
 }
