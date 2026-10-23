@@ -5,7 +5,7 @@ routes = [
   { pattern = "lueurvivante.fr/toctoc", zone_name = "lueurvivante.fr" },
   { pattern = "lueurvivante.fr/toctoc/", zone_name = "lueurvivante.fr" },
   # Jeu servi en premier plan : net.js, /toctoc/ws (WebSocket) et assets sous /toctoc/.
-  { pattern = "lueurvivante.fr/toctoc/*", zone_name = "lueurvivante.fr" }
+  { pattern = "lueurvivante.fr/toctoc*", zone_name = "lueurvivante.fr" }
 ]
 compatibility_date = "2026-10-01"
 

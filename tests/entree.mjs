@@ -11,13 +11,17 @@ assert.deepEqual(route('/toctoc/net.js'), { path: '/net.js', prefixed: true });
 assert.deepEqual(route('/toctoc/ws'), { path: '/ws', prefixed: true });
 assert.deepEqual(route('/ws'), { path: '/ws', prefixed: false });
 assert.deepEqual(route('/'), { path: '/', prefixed: false });
-assert.deepEqual(route('/toctocx'), { path: '/toctocx', prefixed: false });
+assert.deepEqual(route('/toctocx'), { origin: true });
+assert.deepEqual(route('/toctoc-autre'), { origin: true });
+const withQuery=new URL('https://lueurvivante.fr/toctoc?profil=a');
+withQuery.pathname=route(withQuery.pathname).redirect;
+assert.equal(withQuery.href,'https://lueurvivante.fr/toctoc/?profil=a');
 assert.equal(prefixLocation('/'), '/toctoc/');
 assert.equal(prefixLocation('https://x/'), 'https://x/');
 assert.equal(prefixLocation('//evil/'), '//evil/');
 
 const toml = readFileSync('wrangler.toml', 'utf8');
-assert.match(toml, /pattern = "lueurvivante\.fr\/toctoc\/\*"/);
+assert.match(toml, /pattern = "lueurvivante\.fr\/toctoc\*"/);
 // Un asset public/toctoc/index.html serait servi avant le Worker et masquerait le jeu.
 assert.ok(!existsSync('public/toctoc/index.html'), 'public/toctoc/index.html masquerait le jeu');
 const html = readFileSync('public/index.html', 'utf8');

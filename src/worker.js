@@ -15,6 +15,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const r = route(url.pathname);
+    if (r.origin) return url.hostname === 'lueurvivante.fr' ? fetch(request) : new Response('Page introuvable', { status: 404 });
     if (r.redirect) { url.pathname = r.redirect; return Response.redirect(url.href, 308); }
     url.pathname = r.path;
     if (url.pathname === '/ws') {
