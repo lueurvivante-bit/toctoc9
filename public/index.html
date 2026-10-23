@@ -1140,9 +1140,9 @@ function initFx(){ const b=document.createElement('button'); b.id='muteBtn'; b.c
   setInterval(updateCountdown, 350);
   const resume=function(){ const a=ac(); if(a&&a.state==='suspended') a.resume(); document.removeEventListener('pointerdown',resume); };
   document.addEventListener('pointerdown',resume); }
-function updateCountdown(){ document.querySelectorAll('[data-absence-deadline]').forEach(el=>{el.textContent=Math.max(0,Math.ceil((Number(el.dataset.absenceDeadline)-Date.now())/1000));}); const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
+function updateCountdown(){ document.querySelectorAll('[data-absence-deadline]').forEach(el=>{el.textContent=Math.min(10,Math.max(0,Math.ceil((Number(el.dataset.absenceDeadline)-Date.now())/1000)));}); const clock=document.getElementById('powerClock');if(clock&&gstate?.pendingFigure){const left=Math.min(5,Math.max(0,Math.ceil(((gstate.pendingFigure.decisionDeadline||Date.now())-Date.now())/1000)));clock.textContent=left+' s';const button=document.getElementById('figAccept');if(button)button.disabled=left===0;}
  const decision=document.getElementById('powerDecision');
-  if(decision && gstate && gstate.pendingFigure){const f=gstate.pendingFigure;decision.textContent=f.accepted?'Pouvoir choisi':('Utiliser ou passer · '+Math.max(0,Math.ceil(((f.decisionDeadline||Date.now()+5000)-Date.now())/1000))+' s');}
+  if(decision && gstate && gstate.pendingFigure){const f=gstate.pendingFigure;decision.textContent=f.accepted?'Pouvoir choisi':('Utiliser ou passer · '+Math.min(5,Math.max(0,Math.ceil(((f.decisionDeadline||Date.now()+5000)-Date.now())/1000)))+' s');}
   const el=document.getElementById('tdc'); if(!el) return;
   if(gstate && gstate.turnDeadline && !gstate.absent?.[gstate.pendingFigure?.by||gstate.order?.[gstate.turnIndex]]){ const s=Math.max(0,Math.ceil((gstate.turnDeadline-Date.now())/1000));
     el.textContent=' \u00b7 \u23f1 '+s+'s'; el.style.color = s<=3 ? 'var(--knock)' : 'var(--brass-soft)'; }
@@ -2020,7 +2020,7 @@ function renderTurn(){
   }
   const takeResult=gstate.takeResult;
   if(takeResult&&Date.now()-takeResult.ts<8000)act+='<div class="note" role="status">'+nameOf(takeResult.by)+(takeResult.success?' a réussi sa prise : +2 cartes pour '+nameOf(takeResult.opponent)+'.':' a raté sa prise : +1 carte, prochain tour sauté et Prendre chez les autres bloqué pour la manche.')+'</div>';
-  if(fig && fig.by===uid && fig.step==='choose') act=fig.accepted?act:'<div class="power-call"><button class="btn-primary" id="figAccept">Utiliser mon pouvoir</button><span class="power-clock" id="powerClock" aria-label="Temps restant">'+Math.max(0,Math.ceil(((fig.decisionDeadline||Date.now())-Date.now())/1000))+' s</span><button class="btn-ghost" id="figSkip">Passer</button></div><p class="note center">Après le décompte, le pouvoir est passé.</p>';
+  if(fig && fig.by===uid && fig.step==='choose') act=fig.accepted?act:'<div class="power-call"><button class="btn-primary" id="figAccept">Utiliser mon pouvoir</button><span class="power-clock" id="powerClock" aria-label="Temps restant">'+Math.min(5,Math.max(0,Math.ceil(((fig.decisionDeadline||Date.now())-Date.now())/1000)))+' s</span><button class="btn-ghost" id="figSkip">Passer</button></div><p class="note center">Après le décompte, le pouvoir est passé.</p>';
 
   /* ---- L'APPEL render() QUI MANQUAIT : sans lui, l'écran de jeu était vide ---- */
   render('<div class="play-surface"><div class="table-content"><div class="eyebrow center">manche '+gstate.round+'</div>'
@@ -2169,7 +2169,7 @@ function hostPresenceTick(seen,inactiveSince){
 function absentNote(){
   const a=gstate?.absent||{},list=(gstate?.order||[]).filter(u=>a[u]&&u!==uid);if(!list.length)return '';
   return '<div class="note center absent-note">'+list.map(u=>{
-    const deadline=a[u].deadline||Date.now(),left=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+    const deadline=a[u].deadline||Date.now(),left=Math.min(10,Math.max(0,Math.ceil((deadline-Date.now())/1000)));
     return nameOf(u)+' est inactif actuellement · '+(gstate.phase==='peek'?'mémorisation en attente de son retour':left?'tour passé dans <span data-absence-deadline="'+deadline+'">'+left+'</span> s':'son tour sera passé')+(isHost?'<button class="kickbtn" data-kick="'+u+'" title="Retirer de la partie">✕</button>':'');
   }).join('<br>')+'</div>';
 }

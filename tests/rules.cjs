@@ -277,3 +277,17 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+// Décalage d'horloge serveur de 50 ms : ne jamais annoncer 11 s/6 s pour 10 s/5 s.
+vm.runInContext(`
+const absenceLabel={dataset:{absenceDeadline:Date.now()+10050},textContent:''};
+const powerLabel={textContent:''};
+document.querySelectorAll=()=>[absenceLabel];
+document.getElementById=id=>id==='powerClock'?powerLabel:null;
+gstate={pendingFigure:{decisionDeadline:Date.now()+5050}};
+updateCountdown();
+if(absenceLabel.textContent!==10||powerLabel.textContent!=='5 s')throw Error('clock skew inflated countdown');
+absenceLabel.dataset.absenceDeadline=Date.now()-100;gstate.pendingFigure.decisionDeadline=Date.now()-100;
+updateCountdown();if(absenceLabel.textContent!==0||powerLabel.textContent!=='0 s')throw Error('expired countdown');
+`,sandbox);
+console.log('Horloges légèrement décalées : compteurs bornés à dix/cinq secondes, expiration à zéro OK');
