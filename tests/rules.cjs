@@ -246,5 +246,41 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
  `,sandbox);
  console.log('Résultat : dépassement simultané, gagnant au plus petit total et verdict cohérent OK');
 
+ vm.runInContext(`(()=>{
+   const card=rank=>({rank,suit:'♠'});
+   let notice;pushState=x=>{notice=x;};writeHand=()=>{};scheduleBotSnaps=()=>{};checkEmptyHand=()=>false;
+   drawCard=()=>card('9');clearTurnTimer=()=>{};isHost=true;
+   const reset=()=>{gstate={phase:'turn'};G={round:2,order:['me','other'],hostId:'me',hands:{me:[card('7'),card('2')],other:[card('7')]},discard:[card('J')],skip:{},snapSkipTurn:true,_fig:null};notice=null;};
+   for(const type of ['snap','take']){
+     reset();const before=JSON.stringify(G.hands);
+     processAction({type,by:'me',opp:'other',slot:0,expectedTop:{rank:'7',suit:'♠',round:2}});
+     if(JSON.stringify(G.hands)!==before||G.skip.me||G.takeBlocked?.me)throw Error('stale take penalized '+type);
+     if(notice?.move.type!=='takecancelled')throw Error('stale take feedback '+type);
+   }
+   reset();G.discard=[card('7')];
+   processAction({type:'snap',by:'me',slot:0,expectedTop:{rank:'7',suit:'♠',round:1}});
+   if(!G.hands.me[0]||G.skip.me)throw Error('previous round accepted or penalized');
+   reset();G.discard=[card('7')];
+   processAction({type:'snap',by:'me',slot:0,expectedTop:{rank:'7',suit:'♠',round:2}});
+   if(G.hands.me[0]!==null)throw Error('current correct take rejected');
+   reset();G.discard=[card('7')];
+   processAction({type:'snap',by:'me',slot:1,expectedTop:{rank:'7',suit:'♠',round:2}});
+   if(G.hands.me.length!==3||!G.skip.me)throw Error('real mistake no longer penalized');
+   reset();G.discard=[card('7')];processAction({type:'snap',by:'me',slot:0});
+   if(G.hands.me[0]!==null)throw Error('legacy client broken');
+
+   // Le clic Prendre capture la défausse affichée, avant le choix de la carte.
+   const snapButton={},mine={dataset:{mine:'0'}},opponent={dataset:{opp:'other:0'}};
+   document.getElementById=id=>id==='snap'?snapButton:null;
+   screen.querySelectorAll=selector=>selector==='[data-mine]'?[mine]:selector==='[data-opp]'?[opponent]:selector==='[data-mine],[data-opp]'?[mine,opponent]:[];
+   renderGame=()=>{};playSfx=()=>{};buzz=()=>{};let sent;postAction=a=>{sent=a;};uid='me';
+   for(const target of [mine,opponent]){
+     gstate={phase:'turn',round:2,discardTop:card('7'),order:['me','other'],turnIndex:0};snapMode=false;bind();snapButton.onclick();
+     gstate.discardTop=card('J');target.onclick();
+     if(sent.expectedTop.rank!=='7'||sent.expectedTop.round!==2)throw Error('intent replaced by newer discard');
+   }
+ })();`,sandbox);
+ console.log('Prendre : défausse changée ou ancienne manche annulées sans pénalité ; prise actuelle, vraie erreur et anciens clients préservés ; intention capturée au clic OK');
+
 
 })().catch(e=>{console.error(e);process.exitCode=1});

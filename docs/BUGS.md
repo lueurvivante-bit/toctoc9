@@ -10,6 +10,7 @@ noter des mains, noms, jetons ou informations d’élèves.
 | B003 | Impossible de mémoriser/confirmer ou lancer après relance | Signalé le 23/10 ; moteur : transitions validées, cause exacte sur téléphone encore à confirmer. Bouton indique désormais le nombre de cartes restant à regarder. |
 | B004 | Écriture sans ACK ou réservation d’identité sans réponse : promesse indéfinie | Reproduit avec transport simulé. Délai de 8 s, rejet explicite, verrou retiré et message visible ; test network.cjs. |
 | B005 | Refus/erreur serveur seulement en console, verrou jusqu’à une nouvelle vue | Erreurs journalisées, état explicite, verrou retiré sur ACK/refus et reconnexion sur erreur serveur. Tests refus/déconnexion. |
+| B008 | Prendre peut être jugé contre une nouvelle défausse arrivée pendant le clic réseau, avec pénalité malgré l’intention précédente | Signalé pendant le duel Claude/Codex le 23/10. Régression reproduite dans rules.cjs. Le client joint la carte visible et la manche au clic Prendre ; si elles ont changé, le serveur annule la prise sans pénalité et affiche un message. Les véritables erreurs restent pénalisées ; compatibilité conservée avec les anciens clients sans empreinte. Non déployé et non vérifié en partie publique. |
 
 ## Collecte locale
 

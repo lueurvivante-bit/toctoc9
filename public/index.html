@@ -1069,7 +1069,7 @@ let uid=null, code=null, isHost=false;
 let lobbyPlayersRef=null, meRef=null, metaRef=null, stateRef=null, privRef=null, myHandRef=null, actionsRef=null;
 let gstate=null, myDrawn=null, myLook=null, myHand=null, inGame=false;
 let G=null;                 // mémoire autoritaire (organisateur)
-var snapMode=false, figSel=null, lastPlaced=null, lastFailSeen=0;  // état UI local (étaient implicites → déclarés ici)
+var snapMode=false, snapExpected=null, figSel=null, lastPlaced=null, lastFailSeen=0;  // état UI local (étaient implicites → déclarés ici)
 var botTimer=null, hostCfg=null;  // étaient implicites → ReferenceError au tour du bot ⇒ bot bloqué
 
 /* ====== JUS : son · vibration · confettis · flash ====== */
@@ -1117,6 +1117,7 @@ function onStateFx(g){ const s=stSig(g); const p=_prevSig; _prevSig=s; if(!s) re
   /* mouvements des adversaires : on dit qui pioche / regarde / déplace quelle carte */
   const mv=g.move;
   if(mv && mv.ts && mv.ts!==_moveToastTs){ _moveToastTs=mv.ts;
+    if(mv.type==='takecancelled' && mv.who===uid) toast('La défausse a changé : prise annulée, sans pénalité.');
     if(mv.who!==uid && g.phase==='turn'){
       const who=(g.names&&g.names[mv.who])||'Un joueur'; const sl=(mv.slot!=null)?(mv.slot+1):null;
       if(mv.type==='look') toast(who+' regarde sa carte '+sl+' \ud83d\udc40');
@@ -1474,6 +1475,8 @@ let actionKey=null; const processedActions=new Set();
 function clearAction(){ if(actionKey) db.ref('games/'+code+'/actions/'+actionKey).remove(); }
 function consumeActions(s){ const q=s.val()||{}; Object.keys(q).sort().forEach(k=>{if(processedActions.has(k))return; processedActions.add(k);actionKey=k; processAction(q[k]);}); actionKey=null; }
 function topCard(){ return G.discard[G.discard.length-1]; }
+function snapExpectation(card,round){ return card?{rank:card.rank,suit:card.suit,round:round}:null; }
+function staleSnapExpectation(expected){ const top=topCard();return expected!==undefined && (!expected||!top||expected.round!==G.round||expected.rank!==top.rank||expected.suit!==top.suit); }
 /* pioche illimitée : si le sabot est vide, on remélange la défausse (sauf la carte visible) */
 function reshuffleDiscard(){
   if(G.discard && G.discard.length>1){
@@ -1597,6 +1600,9 @@ function processAction(a){
   if(a.type==='restart'){ startNewRound(true); clearAction(); return; }
   if(a.type==='kick'){ if(a.by===G.hostId && a.who && a.who!==G.hostId) kickPlayer(a.who); clearAction(); return; }
   if(a.type==='leave'){ if(a.by!==G.hostId) kickPlayer(a.by); clearAction(); return; }
+  if((a.type==='take'||a.type==='snap') && staleSnapExpectation(a.expectedTop)){
+    pushState({move:{type:'takecancelled',who:a.by,ts:Date.now()}});clearAction();return;
+  }
   if(a.type==='take'){ doTake(a.by,a.opp,a.slot);clearAction();return;}
   if(a.type==='snap'){ doSnap(a.by, a.slot); clearAction(); return; }
   /* figures : seul le r\u00e9solveur agit */
@@ -2273,7 +2279,7 @@ function bind(){
   const dp=document.getElementById('deckPile'); if(dp&&dp.classList.contains('deck-live')) dp.onclick=function(){ snapMode=false; playSfx('draw'); buzz(8); postAction({type:'draw'}); };
   const di=document.getElementById('discard'); if(di) di.onclick=function(){ playSfx('discard'); postAction({type:'discard'}); };
   const tc=document.getElementById('toc'); if(tc) tc.onclick=function(){ playSfx('toc'); buzz([18,40,18]); postAction({type:'toc'}); };
-  const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode; playSfx('flip'); renderGame(); };
+  const sn=document.getElementById('snap'); if(sn) sn.onclick=function(){ snapMode=!snapMode;snapExpected=snapMode?snapExpectation(gstate.discardTop,gstate.round):null; playSfx('flip'); renderGame(); };
   const fa=document.getElementById('figAccept'); if(fa) fa.onclick=function(){fa.disabled=true;postAction({type:'fig_accept'});};
   const fs=document.getElementById('figSkip'); if(fs) fs.onclick=function(){ figSel=null; postAction({type:'fig_skip'}); };
   const fd=document.getElementById('figDone'); if(fd) fd.onclick=function(){ postAction({type:'fig_done'}); };
@@ -2287,12 +2293,12 @@ function bind(){
       if(fig.rank==='J'){ figSel=null; postAction({type:'fig_look',slot:i}); return; }
       if(fig.rank==='Q'||fig.rank==='K'){ selectExchangeCard('mine',i); return; }
     }
-    if(snapMode){ playSfx('flip'); postAction({type:'snap',slot:i}); snapMode=false; return; }
+    if(snapMode){ playSfx('flip'); postAction({type:'snap',slot:i,expectedTop:snapExpected}); snapMode=false; return; }
     const cur=gstate.order[gstate.turnIndex]; if(cur===uid && myDrawn){ lastPlaced=i; playSfx('swap'); buzz(10); postAction({type:'swap',slot:i}); }
   }; });
   /* clic sur cartes ADVERSAIRE (figures Q/K) */
   screen.querySelectorAll('[data-opp]').forEach(function(el){ el.onclick=function(){ const parts=el.dataset.opp.split(':'); const opp=parts[0], os=+parts[1];
-    if(snapMode&&!gstate.takeBlocked?.[uid]){snapMode=false;postAction({type:'take',opp:opp,slot:os});return;}
+    if(snapMode&&!gstate.takeBlocked?.[uid]){snapMode=false;postAction({type:'take',opp:opp,slot:os,expectedTop:snapExpected});return;}
     selectExchangeCard('opp',os,opp);
   }; });
   screen.querySelectorAll('[data-mine],[data-opp]').forEach(el=>{el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};});
