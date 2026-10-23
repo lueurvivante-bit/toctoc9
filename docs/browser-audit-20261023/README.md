@@ -24,3 +24,8 @@ physiques réseau, chaque variante de réglage, chaque prise réussie/protégée
 ni toutes les séquences de double toucher. Des tests moteur/transport
 complémentaires restent exécutés par npm test. Les huit premières parties
 exploratoires (un client initialement large) ne sont pas comptées parmi ces dix.
+
+Relecture après publication : une partie déjà active a conservé un ancien verdict
+serveur. Le client normalise donc aussi le verdict des résultats sauvegardés à
+partir du gagnant et de son score ; test de régression ajouté pour cet ancien
+texte. Aucun score ni résultat n’est modifié.

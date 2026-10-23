@@ -240,6 +240,9 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
    finishRound({layout:33,opponent:43},'TOC');
    if(resultText.winner.uid!=='layout'||resultText.eliminated.includes('layout'))throw Error('winner changed');
    if(!resultText.verdict.includes('plus petit total')||resultText.verdict.includes('éliminés'))throw Error('contradictory verdict');
+   gstate={...resultText,names:G.names,order:G.order,limit:30,verdict:'Tous dépassent 30 — éliminés !'};
+   renderOver();
+   if(layoutMarkup.includes('éliminés !')||!layoutMarkup.includes('plus petit total'))throw Error('legacy verdict displayed');
  `,sandbox);
  console.log('Résultat : dépassement simultané, gagnant au plus petit total et verdict cohérent OK');
 
