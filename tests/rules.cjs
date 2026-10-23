@@ -243,7 +243,7 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
    if(G.botSkill!==1||G.botLevel!=='difficile'||G.peek!==0||G.handSize!==6||G.theme!=='midnight'||G.turnSecs!==17)throw Error('settings independence');
  })()`,sandbox);
  const publicState=[...writes].reverse().find(x=>x?.phase==='peek');assert.equal(publicState.theme,'midnight');assert.equal(publicState.botLevel,'difficile');assert.equal(publicState.turnSecs,17);
- console.log('Réglages : chrono 5–20 s/default 10, difficulté indépendante et cinq thèmes publiés correctement OK');
+ console.log('Réglages : chrono 5–20 s/default 10, difficulté indépendante et tous les thèmes publiés correctement OK');
  // Regression: action controls must be siblings of the fitting surface, never inside it.
  vm.runInContext(`
    var layoutMarkup='';render=function(h){layoutMarkup=h;};
