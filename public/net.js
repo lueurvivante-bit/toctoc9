@@ -14,6 +14,9 @@
   const listeners = new Set();
   const rooms = new Map();
   let notifyQueued = false, nextId = 1, waitTimer = null;
+  // Délais réseau. Une prise WebSocket peut rester « ouverte » sans plus rien
+  // transmettre (téléphone en veille, changement de réseau) : on la remplace.
+  const ACK_MS = 8000, IDLE_MS = 15000, PONG_MS = 5000;
 
   // Bounded local diagnostics: no names, hands, tokens or room codes.
   const diagnosticKey='toc9-bugs-v1';
@@ -80,7 +83,7 @@
     let r = rooms.get(code);
     if (r && r.ws && r.ws.readyState <= 1) return r;
     if (!r) {
-      r = { code, ws: null, loaded: false, server: {}, pending: [], waiting: new Map(), ready: null, readyFn: null, retry: 0, ok: false };
+      r = { code, ws: null, loaded: false, server: {}, pending: [], waiting: new Map(), ready: null, readyFn: null, retry: 0, ok: false, live: null, pong: false };
       r.ready = new Promise((res) => { r.readyFn = res; });
       rooms.set(code, r);
     }
@@ -88,9 +91,12 @@
     r.ws = ws;
     ws.onopen = () => { ws.send(JSON.stringify({ t: 'hello', uid: identity, token: secret })); };
     ws.onmessage = (ev) => {
+      if (r.ws !== ws) return; // message tardif d'une ancienne prise
       const m = JSON.parse(ev.data);
+      if (r.pong) watch(r, ws);
       if (m.t === 'hello') {
         r.ok = true; r.retry = 0; setStatusSafe('connecté', 'ok');
+        r.pong = !!m.pong; if (r.pong) watch(r, ws);
         for (const w of r.pending) ws.send(JSON.stringify(w.msg));
       } else if (m.t === 'view') {
         const d = m.d;
@@ -111,22 +117,52 @@
         const p = r.waiting.get(m.id); r.waiting.delete(m.id);
         if (p) { if (m.ok) p.resolve(m); else p.reject(new Error(m.error || 'refusé')); }
       } else if (m.t === 'error') {
-        networkFailure('server-error');console.error('serveur', m.reason);ws.close();
+        networkFailure('server-error');console.error('serveur', m.reason);restart(r);
       }
     };
-    ws.onclose = () => {
-      r.ok = false;
-      for (const p of r.waiting.values()) p.reject(new Error('Connexion interrompue'));
-      r.waiting.clear();
-      // Les actions de jeu non confirmées ne sont pas renvoyées (pas de double coup).
-      for (const w of r.pending.filter((x) => x.action)){clearTimeout(w.timer);networkFailure('disconnected',w.label);w.reject(new Error('Connexion interrompue'));}
-      r.pending = r.pending.filter((x) => !x.action);
-      rebuild();
-      setStatusSafe('reconnexion…', 'err');
-      const delay = Math.min(3000, 300 * Math.pow(2, r.retry++));
-      setTimeout(() => connect(code), delay);
-    };
+    ws.onclose = () => lost(r, ws);
     return r;
+  }
+
+  // Fin d'une prise (fermée par le réseau ou abandonnée par nous) : une seule fois par prise.
+  function lost(r, ws) {
+    if (ws.dead) return;
+    ws.dead = true;
+    if (r.ws !== ws) return;
+    clearTimeout(r.live); r.live = null;
+    r.ok = false;
+    for (const p of r.waiting.values()) p.reject(new Error('Connexion interrompue'));
+    r.waiting.clear();
+    // Les actions de jeu non confirmées ne sont pas renvoyées (pas de double coup).
+    for (const w of r.pending.filter((x) => x.action)){clearTimeout(w.timer);networkFailure('disconnected',w.label);w.reject(new Error('Connexion interrompue'));}
+    r.pending = r.pending.filter((x) => !x.action);
+    rebuild();
+    setStatusSafe('reconnexion…', 'err');
+    const delay = Math.min(3000, 300 * Math.pow(2, r.retry++));
+    setTimeout(() => connect(r.code), delay);
+  }
+
+  // Abandonne la prise courante sans attendre la fin du handshake de fermeture
+  // (qui peut durer longtemps sur une connexion morte) et relance la reconnexion :
+  // nouveau hello, vue complète du serveur, écritures hors action renvoyées.
+  function restart(r, kind) {
+    const ws = r.ws;
+    if (!ws || ws.dead) return;
+    if (kind) recordBug(kind);
+    ws.onmessage = null; ws.onclose = null; ws.onerror = null;
+    try { ws.close(4000, kind || 'restart'); } catch (_) {}
+    lost(r, ws);
+  }
+
+  // Vigie applicative (si le serveur sait répondre « pong ») : après IDLE_MS sans
+  // aucun message, on envoie un ping ; sans réponse en PONG_MS, la prise est remplacée.
+  function watch(r, ws) {
+    clearTimeout(r.live);
+    r.live = setTimeout(() => {
+      if (r.ws !== ws || ws.dead || !r.ok) return;
+      try { ws.send(JSON.stringify({ t: 'ping' })); } catch (_) {}
+      r.live = setTimeout(() => { if (r.ws === ws) restart(r, 'silent-socket'); }, PONG_MS);
+    }, IDLE_MS);
   }
 
   function setStatusSafe(t, c) { try { if (typeof setStatus === 'function') setStatus(t, c); } catch (e) {} }
@@ -149,11 +185,18 @@
     return new Promise((resolve, reject) => {
       const w = { msg, path: msg.path.slice(('games/' + code).length + 1), op, value: msg.value, resolve, reject, action: isAction };
       w.label=isAction?(value?.type||'action'):(keysOf(path)[3]==='peekDone'?'memorize':'write');
-      w.timer=setTimeout(()=>{
+      const expire=()=>{
         const index=r.pending.indexOf(w);if(index<0)return;
+        // Écriture idempotente hors action (mémorisation, profil…) : gardée et renvoyée
+        // une fois sur une nouvelle prise, comme après une coupure ordinaire.
+        if(!w.action&&!w.retried){w.retried=true;w.timer=setTimeout(expire,ACK_MS);restart(r,'ack-timeout-retry');return;}
         r.pending.splice(index,1);rebuild();networkFailure('ack-timeout',w.label);
         reject(new Error('Action non confirmée. Vérifie l’état de la partie avant de réessayer.'));
-      },8000);
+        // Prise probablement à moitié morte : on la remplace pour que les coups suivants passent.
+        // L'action expirée n'est jamais rejouée automatiquement (pas de double coup).
+        restart(r);
+      };
+      w.timer=setTimeout(expire,ACK_MS);
       r.pending.push(w);
       // Écriture appliquée localement tout de suite ; une action de jeu attend le serveur.
       if (isAction) startWait(); else rebuild();

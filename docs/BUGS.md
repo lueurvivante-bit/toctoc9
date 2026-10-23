@@ -10,6 +10,7 @@ noter des mains, noms, jetons ou informations d’élèves.
 | B003 | Impossible de mémoriser/confirmer ou lancer après relance | Signalé le 23/10 ; moteur : transitions validées, cause exacte sur téléphone encore à confirmer. Bouton indique désormais le nombre de cartes restant à regarder. |
 | B004 | Écriture sans ACK ou réservation d’identité sans réponse : promesse indéfinie | Reproduit avec transport simulé. Délai de 8 s, rejet explicite, verrou retiré et message visible ; test network.cjs. |
 | B005 | Refus/erreur serveur seulement en console, verrou jusqu’à une nouvelle vue | Erreurs journalisées, état explicite, verrou retiré sur ACK/refus et reconnexion sur erreur serveur. Tests refus/déconnexion. |
+| B007 | Partie réelle à deux navigateurs (23/10) : après une coupure, trois échanges sans ACK, l’indicateur reste « connecté », chaque coup expire, plus rien ne passe ; un simple rechargement débloque (le serveur avait l’état d’avant le coup et l’accepte aussitôt). Piste probable pour B002. | Cause : prise WebSocket ouverte mais muette ; l’expiration de l’ACK retirait l’écriture sans jamais remplacer la prise. Correctif net.js : ACK expiré → prise abandonnée et reconnexion (hello, vue complète) ; action expirée jamais rejouée ; écriture hors action (mémorisation) gardée et renvoyée une fois, puis rejet borné ; vigie ping/pong si le serveur l’annonce (15 s sans message, 5 s pour répondre). Tests network.cjs (échouent sur l’ancien net.js). Non vérifié en production avant déploiement. |
 
 ## Collecte locale
 
