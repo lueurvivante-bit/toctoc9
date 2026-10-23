@@ -15,6 +15,21 @@
   const rooms = new Map();
   let notifyQueued = false, nextId = 1, waitTimer = null;
 
+  // Bounded local diagnostics: no names, hands, tokens or room codes.
+  const diagnosticKey='toc9-bugs-v1';
+  function recordBug(kind, action) {
+    try { const log=JSON.parse(localStorage.getItem(diagnosticKey)||'[]');
+      log.push({at:new Date().toISOString(),kind,action:action||'network'});
+      localStorage.setItem(diagnosticKey,JSON.stringify(log.slice(-100)));
+    } catch (_) {}
+  }
+  function networkFailure(kind, action) {
+    recordBug(kind,action);endWait();setStatusSafe('Action non confirmée · réessaie','err');
+    try { if(typeof toast==='function')toast('Le serveur n’a pas confirmé. Vérifie la connexion puis réessaie.','bad'); } catch (_) {}
+  }
+  window.addEventListener?.('error',()=>recordBug('client-error'));
+  window.addEventListener?.('unhandledrejection',()=>recordBug('unhandled-rejection'));
+  window.tocBugJournal=()=>{try{return JSON.parse(localStorage.getItem(diagnosticKey)||'[]');}catch(_){return [];}};
   const clone = (v) => (v === undefined || v === null ? null : structuredClone(v));
   const keysOf = (path) => String(path).split('/').filter(Boolean);
   const at = (path) => keysOf(path).reduce((v, k) => (v == null ? null : v[k]), tree) ?? null;
@@ -91,12 +106,12 @@
         const i = r.pending.findIndex((w) => w.msg.id === m.id);
         const w = i >= 0 ? r.pending.splice(i, 1)[0] : null;
         rebuild();
-        if (w) { if (m.ok) w.resolve(); else w.reject(new Error(m.error || 'refusé')); }
+        if (w) { clearTimeout(w.timer);endWait();if (m.ok) w.resolve(); else {networkFailure('rejected',w.label);w.reject(new Error(m.error || 'refusé'));} }
       } else if (m.t === 'res') {
         const p = r.waiting.get(m.id); r.waiting.delete(m.id);
         if (p) { if (m.ok) p.resolve(m); else p.reject(new Error(m.error || 'refusé')); }
       } else if (m.t === 'error') {
-        console.error('serveur', m.reason);
+        networkFailure('server-error');console.error('serveur', m.reason);ws.close();
       }
     };
     ws.onclose = () => {
@@ -104,7 +119,7 @@
       for (const p of r.waiting.values()) p.reject(new Error('Connexion interrompue'));
       r.waiting.clear();
       // Les actions de jeu non confirmées ne sont pas renvoyées (pas de double coup).
-      for (const w of r.pending.filter((x) => x.action)) w.reject(new Error('Connexion interrompue'));
+      for (const w of r.pending.filter((x) => x.action)){clearTimeout(w.timer);networkFailure('disconnected',w.label);w.reject(new Error('Connexion interrompue'));}
       r.pending = r.pending.filter((x) => !x.action);
       rebuild();
       setStatusSafe('reconnexion…', 'err');
@@ -133,6 +148,12 @@
     const msg = { t: 'w', id: nextId++, path: 'games/' + code + '/' + keysOf(path).slice(2).join('/'), op, value: value === undefined ? null : structuredClone(value) };
     return new Promise((resolve, reject) => {
       const w = { msg, path: msg.path.slice(('games/' + code).length + 1), op, value: msg.value, resolve, reject, action: isAction };
+      w.label=isAction?(value?.type||'action'):(keysOf(path)[3]==='peekDone'?'memorize':'write');
+      w.timer=setTimeout(()=>{
+        const index=r.pending.indexOf(w);if(index<0)return;
+        r.pending.splice(index,1);rebuild();networkFailure('ack-timeout',w.label);
+        reject(new Error('Action non confirmée. Vérifie l’état de la partie avant de réessayer.'));
+      },8000);
       r.pending.push(w);
       // Écriture appliquée localement tout de suite ; une action de jeu attend le serveur.
       if (isAction) startWait(); else rebuild();
@@ -162,7 +183,7 @@
     onDisconnect() { return { remove: () => Promise.resolve(), cancel: () => Promise.resolve(), set: () => Promise.resolve() }; }
   }
   function withTimeout(p, ms) {
-    return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Serveur injoignable, réessaie.')), ms))]);
+    return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{networkFailure('response-timeout');reject(new Error('Serveur injoignable, réessaie.'));},ms);p.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});
   }
 
   window.firebase = {
@@ -177,11 +198,14 @@
 
   function request(room, payload) {
     const r = connect(room);
-    return withTimeout(r.ready, 8000).then(() => new Promise((resolve, reject) => {
-      const id = nextId++;
-      r.waiting.set(id, { resolve, reject });
-      r.ws.send(JSON.stringify(Object.assign({ id }, payload)));
-    }));
+    return withTimeout(r.ready, 8000).then(() => {
+      const id=nextId++;
+      return withTimeout(new Promise((resolve,reject)=>{
+        r.waiting.set(id,{resolve,reject});
+        if(r.ws.readyState!==1||!r.ok){reject(new Error('Connexion interrompue'));return;}
+        r.ws.send(JSON.stringify(Object.assign({id},payload)));
+      }),8000).finally(()=>r.waiting.delete(id));
+    });
   }
   window.cloudAvatarOptions = async function (room) {
     const r = connect(room.toUpperCase());
