@@ -5,6 +5,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { createRuntime } from './engine.gen.js';
 import { Store, serverFirebase } from './store.js';
 import { electHost } from './host.js';
+import { route, prefixLocation } from './route.js';
 
 const ROOM_RE = /^[A-Z0-9]{4}$/;
 const ICONS = ['fox', 'bear', 'panda', 'lion', 'tiger', 'koala', 'frog', 'owl', 'monkey', 'penguin', 'unicorn', 'octopus', 'cat', 'dog', 'rabbit', 'mouse', 'wolf', 'chick', 'dragon', 'robot'];
@@ -13,13 +14,21 @@ const ACTIONS = new Set(['launch', 'draw', 'discard', 'swap', 'snap', 'take', 't
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const r = route(url.pathname);
+    if (r.redirect) { url.pathname = r.redirect; return Response.redirect(url.href, 308); }
+    url.pathname = r.path;
     if (url.pathname === '/ws') {
       const room = (url.searchParams.get('room') || '').toUpperCase();
       if (!ROOM_RE.test(room)) return new Response('Salle invalide', { status: 400 });
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket attendu', { status: 426 });
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(request);
     }
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(new Request(url, request));
+    const loc = res.headers.get('Location');
+    if (!r.prefixed || !loc || prefixLocation(loc) === loc) return res;
+    const out = new Response(res.body, res);
+    out.headers.set('Location', prefixLocation(loc));
+    return out;
   },
 };
 

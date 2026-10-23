@@ -47,11 +47,15 @@ Les tests navigateur visent `http://127.0.0.1:8787/` (serveur local lancé).
 
 ## Entrée indépendante sur le domaine principal
 
-`public/toctoc/index.html` est une entrée plein écran vers le jeu Workers actuel.
-Les deux routes Cloudflare de `wrangler.toml` servent uniquement `/toctoc` et
-`/toctoc/` ; `/galaxy`, `/account` et les autres chemins restent chez Vercel.
-Le moteur, les salles et leurs identités ne sont ni déplacés ni dupliqués.
-`workers_dev = true` conserve l'origine du jeu utilisée par l'entrée intégrée.
+Le jeu lui-même est servi en premier plan sous `lueurvivante.fr/toctoc/` (plus
+d'iframe : sur iPhone, le stockage d'une iframe tierce est éphémère et le joueur
+perdait son identité, voir B007). Les routes de `wrangler.toml` couvrent `/toctoc`,
+`/toctoc/` et `/toctoc/*` ; `src/route.js` retire le préfixe (`/toctoc/net.js` →
+`net.js`, `/toctoc/ws` → WebSocket) et `/toctoc` redirige vers `/toctoc/`.
+`/galaxy`, `/account` et les autres chemins restent chez Vercel. Ne pas recréer
+`public/toctoc/index.html` : un asset est servi avant le Worker et masquerait le jeu.
+`workers_dev = true` garde aussi le jeu sur toctoc9.lueurvivante.workers.dev
+(identités distinctes : origine différente).
 
 Activation : la zone lueurvivante.fr doit être active chez Cloudflare et le DNS
 racine doit être proxifié (nuage orange), avec chiffrement SSL/TLS Full (strict).

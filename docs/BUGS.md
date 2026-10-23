@@ -82,3 +82,17 @@ Le comptage du bilan fait autorité dans [AUDIT_REPORT_2026-10-23.md](AUDIT_REPO
 | B014 | Transport d’une ancienne salle conservé et susceptible de se reconnecter après sortie | Risque de code ; correctif PR #12, test de libération et absence de reconnexion différée. |
 
 Incidents de test exclus du nombre de bugs du jeu : I001, suivi de positions périmées par le pilotage Codex en fin de partie 4 ; I002, contrôle Chrome indisponible autour du dialogue natif Quitter. L’origine exacte de l’indisponibilité du contrôle n’est pas prouvée. PR #12 remplace ce dialogue par une confirmation dans la page, testée localement.
+
+## B010 — entrée en premier plan (23 octobre)
+
+Migration unique : les identités créées dans l’ancienne iframe sont partitionnées
+sous lueurvivante.fr et ne sont pas lisibles en premier plan ; un joueur au milieu
+d’une partie lancée avant la mise en ligne la perd une fois. Déployer entre deux
+parties. Les identités workers.dev ne sont pas transférées non plus (autre origine).
+
+À vérifier sur iPhone réel après déploiement (test décisif) : ouvrir
+lueurvivante.fr/toctoc/ dans Safari, rejoindre une partie, fermer Safari de force
+(sélecteur d’apps), rouvrir la même adresse : la partie doit reprendre avec le même
+joueur, sans repasser par l’accueil. Refaire depuis l’app Messages (lien ouvert puis
+retour) et depuis Chrome iOS. Vérifier aussi que wss://lueurvivante.fr/toctoc/ws
+s’ouvre (onglet Réseau) et que lueurvivante.fr/toctoc (sans barre) redirige.
