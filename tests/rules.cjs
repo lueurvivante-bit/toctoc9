@@ -234,5 +234,14 @@ console.log('Mémorisation : boutons réels testés pour quotas 0/1/2/6, pas de 
    }
  `,sandbox);
  console.log('Mise en page : actions hors de la table, mémorisation et partie, 2/10 joueurs et quotas 0/1/6 OK');
+ vm.runInContext(`
+   var resultText;stateRef={update:v=>{resultText=v;}};saveEngine=function(){};
+   G={order:['layout','opponent'],scores:{layout:0,opponent:0},hands:{layout:[],opponent:[]},names:{layout:'Gagnant',opponent:'Autre'},limit:30,eliminated:[]};
+   finishRound({layout:33,opponent:43},'TOC');
+   if(resultText.winner.uid!=='layout'||resultText.eliminated.includes('layout'))throw Error('winner changed');
+   if(!resultText.verdict.includes('plus petit total')||resultText.verdict.includes('éliminés'))throw Error('contradictory verdict');
+ `,sandbox);
+ console.log('Résultat : dépassement simultané, gagnant au plus petit total et verdict cohérent OK');
+
 
 })().catch(e=>{console.error(e);process.exitCode=1});

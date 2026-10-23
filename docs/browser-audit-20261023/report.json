@@ -1,0 +1,1328 @@
+{
+  "games": 10,
+  "actions": 128,
+  "events": [
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 8",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "queen",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le 10",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "look",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 1,
+      "actions": 11
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 6",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 2",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le 4",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 2",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 2,
+      "actions": 22
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "queen",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 2",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 8",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le 6",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le K",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "king",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 3,
+      "actions": 33
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 9",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 10",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le 4",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "look",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 4,
+      "actions": 44
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "guest-reload",
+      "afterGame": 4
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "look",
+      "who": "host"
+    },
+    {
+      "event": "finish-power",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "look",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "queen",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "look",
+      "who": "host"
+    },
+    {
+      "event": "finish-power",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "queen",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 5,
+      "actions": 55
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "look",
+      "who": "host"
+    },
+    {
+      "event": "finish-power",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "look",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 4",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le 4",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 2",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 6,
+      "actions": 66
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 7",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le K",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "king",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "queen",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le K",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "king",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 7,
+      "actions": 78
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 8",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le A",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le K",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "king",
+      "who": "host"
+    },
+    {
+      "event": "finish-power",
+      "who": "host"
+    },
+    {
+      "event": "host-reload",
+      "afterGame": 7
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 3",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 3",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 3",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 3",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "guest"
+    },
+    {
+      "event": "completed",
+      "game": 8,
+      "actions": 93
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 8",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "look",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "queen",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 8",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "next-round",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le 9",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 4",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le A",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le J",
+      "who": "guest"
+    },
+    {
+      "event": "accept-power",
+      "who": "guest"
+    },
+    {
+      "event": "look",
+      "who": "guest"
+    },
+    {
+      "event": "finish-power",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "queen",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le 2",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 9,
+      "actions": 117
+    },
+    {
+      "event": "restart",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "host"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "memory",
+      "who": "guest"
+    },
+    {
+      "event": "take-attempt",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "draw-swap",
+      "who": "host"
+    },
+    {
+      "event": "Ta carte 1",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le A",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le A",
+      "who": "guest"
+    },
+    {
+      "event": "Piocher",
+      "who": "host"
+    },
+    {
+      "event": "Défausser le Q",
+      "who": "host"
+    },
+    {
+      "event": "accept-power",
+      "who": "host"
+    },
+    {
+      "event": "queen",
+      "who": "host"
+    },
+    {
+      "event": "Piocher",
+      "who": "guest"
+    },
+    {
+      "event": "Défausser le A",
+      "who": "guest"
+    },
+    {
+      "event": "TOC",
+      "who": "host"
+    },
+    {
+      "event": "completed",
+      "game": 10,
+      "actions": 128
+    }
+  ],
+  "takeTried": true,
+  "swapped": true,
+  "overSeen": true,
+  "viewports": {
+    "host": {
+      "height": 720,
+      "width": 390
+    },
+    "guest": {
+      "height": 540,
+      "width": 260
+    }
+  },
+  "consoleErrors": {
+    "host": [],
+    "guest": []
+  },
+  "scope": "10 parties terminées via deux clients WebSocket réels, identités distinctes, affichage mobile ; pas de téléphone physique, pas de Claude Code",
+  "bonus": {
+    "events": [
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "J’ai mémorisé"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "host",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "guest",
+        "name": "Regarder la carte 1"
+      },
+      {
+        "who": "guest",
+        "name": "J’ai mémorisé"
+      },
+      {
+        "who": "host",
+        "name": "Piocher"
+      },
+      {
+        "who": "host",
+        "name": "Défausser le Q"
+      }
+    ],
+    "found": {
+      "who": "host",
+      "at": 1792756059425,
+      "snapshot": "- generic: connecté\n- generic: Test Hote 0\n- generic: Test Invite 0\n- generic: sortie à +30\n- navigation \"Ordre de jeu\":\n  - generic \"1. Test Hote joue maintenant\":\n    - generic: \"1\"\n    - generic: 🦊 Test Hote\n    - generic: \"0\"\n    - text: ›\n  - generic \"2. Test Invite joue ensuite\":\n    - generic: \"2\"\n    - generic: 🐱 Test Invite\n    - generic: \"0\"\n- generic: \"2\"\n- text: 🐱 Test Invite suivant\n- button \"Carte 1 de Test Invite\":\n  - generic: ✦\n- generic: \"1\"\n- button \"Carte 2 de Test Invite\":\n  - generic: ✦\n- generic: \"2\"\n- button \"Carte 3 de Test Invite\":\n  - generic: ✦\n- generic: \"3\"\n- button \"Carte 4 de Test Invite\":\n  - generic: ✦\n- generic: \"4\"\n- generic: Pioche\n- generic: ✦\n- generic: \"42\"\n- generic: Défausse\n- generic: Q\n- generic: ♠\n- generic: ✦\n- button \"🦊 Test Hote\"\n- button \"Ta carte 1\":\n  - generic: ✦\n- generic: \"1\"\n- button \"Ta carte 2\":\n  - generic: ✦\n- generic: \"2\"\n- button \"Ta carte 3\":\n  - generic: ✦\n- generic: \"3\"\n- button \"Ta carte 4\":\n  - generic: ✦\n- generic: \"4\"\n- generic: \"✨ Ton pouvoir : Dame\"\n- button \"Utiliser mon pouvoir\"\n- generic \"Temps restant\": 6 s\n- button \"Passer\"\n- paragraph: Après le décompte, le pouvoir est passé.\n- status\n- generic: Prêt !\n- button \"🔊\"\n- button \"✕ Quitter\"\n- generic: ✦"
+    },
+    "expiry": {
+      "host": false,
+      "guest": true,
+      "after": 1792756073460
+    }
+  }
+}

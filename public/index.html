@@ -1527,6 +1527,7 @@ function finishRound(roundScores, text){
     let winId;
     if(left.length===1) winId=left[0];
     else { const sc={}; played.forEach(function(u){ sc[u]=G.scores[u]; }); winId=gameWinner(sc).id; }
+    if(!left.length)txt=text+' · Tous les joueurs dépassent '+G.limit+' points. '+nameOf(winId)+' remporte la partie avec le plus petit total ('+G.scores[winId]+' pts).';
     G.eliminated=(G.eliminated||[]).concat(out.filter(function(u){ return u!==winId; }));
     stateRef.update({phase:'over',reveal:reveal,revealOrder:played,scores:G.scores,verdict:txt,
       winner:{uid:winId,score:G.scores[winId]||0},eliminated:G.eliminated,pendingFigure:null});
@@ -2029,7 +2030,7 @@ function renderOver(){
   if(iPlayed && iWon) result='<div class="result win">\ud83c\udf89 Tu remportes la partie avec <b>'+myScore+'</b> pts !</div>';
   else if(iPlayed) result='<div class="result lose">'+(iElim?'Tu as d\u00e9pass\u00e9 <b>'+limit+'</b> \u2014 \u00e9limin\u00e9 avec <b>'+myScore+'</b> pts.':'Tu finis <b>'+myRank+'\u1d49</b> sur '+ordre.length+' \u2014 <b>'+myScore+'</b> pts, \u00e0 '+gap+' pt'+(gap>1?'s':'')+' du vainqueur.')
       +'<br><span class="cons">'+CONSOLE_MSG[Math.floor(Math.random()*CONSOLE_MSG.length)]+'</span></div>';
-  const why='<div class="endwhy">On sort de la partie en d\u00e9passant <b>'+limit+'</b> pts \u2014 le dernier en lice gagne.</div>';
+  const why='<div class="endwhy">'+(w.score>limit?'Tous les joueurs ont dépassé '+limit+' pts : le plus petit total gagne.':'On sort de la partie en dépassant <b>'+limit+'</b> pts — le dernier en lice gagne.')+'</div>';
   const arr = iWon ? PRAISE_YOU : PRAISE_WIN.map(function(s){ return s.replace('{w}',wname); });
   render('<div class="eyebrow center">partie termin\u00e9e</div>'
     +'<div class="podium">'+sats+'<div class="champ"><div class="crown">\ud83d\udc51</div><div class="cava">'+avatarOf(winId)+'</div><div class="cname">'+nameOf(winId)+(winId===uid?'\u00a0(toi)':'')+'</div><div class="cscore">'+(sc[winId]||0)+' pts</div></div></div>'
