@@ -7,7 +7,7 @@ function client(){
  vm.runInNewContext(fs.readFileSync('public/net.js','utf8'),ctx);
  const run=ms=>{for(const [i,t]of [...timers])if(t.ms===ms){timers.delete(i);t.fn();}};
  const recv=(ws,m)=>ws.onmessage?.({data:JSON.stringify(m)});
- return {ctx,sockets,classes,notices,events,run,recv,expire(){run(8000);},reconnect(){run(300);run(600);return sockets.at(-1);},
+ return {ctx,sockets,classes,notices,events,run,recv,timers,expire(){run(8000);},reconnect(){run(300);run(600);return sockets.at(-1);},
   hello(extra){const ws=sockets.at(-1);ws.onopen();recv(ws,Object.assign({t:'hello'},extra));return ws;}};
 }
 (async()=>{
@@ -117,6 +117,32 @@ function client(){
   c.ctx.window.cloudReleaseRoom('NEW1');assert.equal(next.readyState,3);
   c.run(300);c.run(600);assert.equal(c.sockets.length,2);
  }
+{
+  // Veille d'une salle inactive : pas de reconnexion automatique, reprise au toucher,
+  // au retour sur l'onglet ou à la première écriture.
+  const c=client(),db=c.ctx.window.firebase.database();db.ref('games/TEST/state').on('value',()=>{});
+  const allTimers=()=>{for(const ms of [300,600,1200,2400,3000,4800,9600,15000,8000,5000])c.run(ms);};
+  const ws1=c.hello();c.recv(ws1,{t:'view',d:{state:{phase:'turn'}},full:true});
+  c.recv(ws1,{t:'sleep'});
+  assert.equal(ws1.readyState,3,'prise non fermée à la mise en veille');
+  allTimers();assert.equal(c.sockets.length,1,'reconnexion automatique pendant la veille');
+  await assert.rejects(c.ctx.window.cloudHeartbeat('TEST'),/veille/,'battement doit signaler la veille');
+  c.events.window.pointerdown();assert.equal(c.sockets.length,2,'toucher ne réveille pas la salle');
+  const ws2=c.hello();assert.deepEqual(ws2.sent.map(m=>m.t),['hello']);
+  ws2.onclose({code:4001});allTimers();assert.equal(c.sockets.length,2,'fermeture 4001 suivie d’une reconnexion');
+  c.ctx.document.visibilityState='visible';c.events.document.visibilitychange();
+  assert.equal(c.sockets.length,3,'retour sur l’onglet ne réveille pas la salle');
+  const ws3=c.hello();c.recv(ws3,{t:'sleep'});allTimers();assert.equal(c.sockets.length,3);
+  const write=db.ref('games/TEST/players/me').update({name:'Moi'}).then(()=>null,e=>e.message);
+  assert.equal(c.sockets.length,4,'une écriture ne réveille pas la salle');
+  const ws4=c.hello();const w=ws4.sent.find(m=>m.t==='w');assert.ok(w,'écriture non envoyée après réveil');
+  c.recv(ws4,{t:'ack',id:w.id,ok:true});assert.equal(await write,null);
+  // Échecs répétés (serveur indisponible) : reconnexion espacée à 15 s au lieu de 3 s.
+  const d=client();d.ctx.window.firebase.database().ref('games/TEST/state').on('value',()=>{});d.hello();const delays=[];
+  for(let i=0;i<8;i++){d.sockets.at(-1).close();const t=[...d.timers.values()].at(-1);delays.push(t.ms);d.timers.clear();t.fn();}
+  assert.deepEqual(delays,[300,600,1200,2400,3000,3000,15000,15000],'espacement des reconnexions');
+ }
+ console.log('Veille : salle inactive fermée par le serveur, aucune reconnexion automatique, reprise au toucher/onglet/écriture OK');
  console.log('Arrière-plan, battement visible, pagehide, retour/BFCache : identité et vue de partie préservées OK');
  console.log('Réseau B007 : prise muette remplacée après ACK absent, vue complète, aucune action rejouée, coup suivant confirmé ; mémorisation renvoyée une fois ; vigie ping/pong OK');
 })().catch(e=>{console.error(e);process.exitCode=1});

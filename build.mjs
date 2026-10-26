@@ -104,6 +104,20 @@ ${script}
     },
     // Joueur absent : jamais joué par un bot. Voir hostPresenceTick dans public/index.html.
     presenceTick(seen,inactiveSince) { hostPresenceTick(seen,inactiveSince); },
+    // Salle en veille : plus aucun minuteur armé (tour, pouvoir, bots).
+    sleep() {
+      clearTurnTimer();
+      if (powerDecisionTimer) { clearTimeout(powerDecisionTimer); powerDecisionTimer = null; }
+      if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+      if (botSnapTimer) { clearTimeout(botSnapTimer); botSnapTimer = null; }
+      if (G) { G._turnFor = null; G._turnDeadline = null; }
+    },
+    // Retour d'un joueur : échéances recalculées à partir de maintenant, minuteurs réarmés.
+    wake() {
+      if (!G || !gstate) return;
+      if (gstate.phase === 'turn') pushState();
+      hostMaybeAdvance(); maybeScheduleBot(); maybeScheduleTurnTimer();
+    },
   };
 }
 `;

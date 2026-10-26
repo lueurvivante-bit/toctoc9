@@ -73,4 +73,21 @@ console.log('Avec/sans chrono : absence immédiate, grâce dix secondes, tour pa
  assert.deepEqual([...pl.s().order].sort(),['h','p'],'Je joue : le créateur absent a perdu sa place');
 }
 console.log('Organisateur rendu au créateur ; siège arbitre/joueur stable même lancé par un remplaçant OK');
+// Veille de salle : plus aucun minuteur actif (aucun tour passé sans joueur), réarmé au réveil.
+{
+ const r=await room({turnTimer:true});
+ r.store.ref(r.base+'/state/peekDone/h').set(true);r.store.ref(r.base+'/state/peekDone/p').set(true);await tick();
+ assert.equal(r.s().phase,'turn');
+ const live=()=>r.timers.filter(t=>!t.dead&&t.ms===5300);
+ assert.ok(live().length,'chrono de tour non armé');
+ const turn=r.s().turnNumber;
+ r.rt.sleep();
+ assert.equal(live().length,0,'chrono encore armé pendant la veille');
+ assert.equal(r.s().turnNumber,turn);
+ r.rt.wake();await tick();
+ assert.ok(live().length,'chrono non réarmé au réveil');
+ assert.ok(r.s().turnDeadline>=Date.now()+4000,'échéance de tour non recalculée au réveil');
+ await r.fire(5300);assert.equal(r.s().turnNumber,turn+1,'tour non passé après réveil');
+}
+console.log('Veille : minuteurs du moteur annulés en veille et réarmés au réveil OK');
 process.exit(0);
