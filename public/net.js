@@ -16,7 +16,7 @@
   const rooms = new Map();
   let notifyQueued = false, nextId = 1, waitTimer = null;
   const isActive=()=>document.visibilityState!=='hidden';
-  function signalPresence(resume=false){for(const r of rooms.values()){if(resume&&isActive()){restart(r,'resume');continue;}if(r.ok&&r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:isActive()}));}}
+  function signalPresence(resume=false){for(const r of rooms.values()){if(r.sleeping){if(isActive())wake(r);continue;}if(resume&&isActive()){restart(r,'resume');continue;}if(r.ok&&r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:isActive()}));}}
   document.addEventListener?.('visibilitychange',()=>signalPresence(isActive()));
   window.addEventListener?.('pagehide',()=>{for(const r of rooms.values())if(r.ok&&r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:false}));});
   window.addEventListener?.('pageshow',e=>{if(e.persisted)signalPresence(true);});
@@ -88,6 +88,7 @@
   function connect(code) {
     let r = rooms.get(code);
     if (r && r.ws && r.ws.readyState <= 1) return r;
+    if (r && r.sleeping) return r; // salle en veille : on attend un geste du joueur (wake)
     if (!r) {
       r = { code, ws: null, loaded: false, server: {}, pending: [], waiting: new Map(), ready: null, readyFn: null, retry: 0, ok: false, live: null, pong: false };
       r.ready = new Promise((res) => { r.readyFn = res; });
@@ -123,19 +124,21 @@
       } else if (m.t === 'res') {
         const p = r.waiting.get(m.id); r.waiting.delete(m.id);
         if (p) { if (m.ok) p.resolve(m); else p.reject(new Error(m.error || 'refusé')); }
+      } else if (m.t === 'sleep') {
+        sleep(r, ws);
       } else if (m.t === 'error') {
         networkFailure('server-error');console.error('serveur', m.reason);restart(r);
       }
     };
-    ws.onclose = () => lost(r, ws);
+    ws.onclose = (e) => (e && e.code === 4001 ? sleep(r, ws) : lost(r, ws));
     return r;
   }
 
   // Fin d'une prise (fermée par le réseau ou abandonnée par nous) : une seule fois par prise.
-  function lost(r, ws) {
-    if (ws.dead) return;
+  function drop(r, ws) {
+    if (ws.dead) return false;
     ws.dead = true;
-    if (r.ws !== ws) return;
+    if (r.ws !== ws) return false;
     clearTimeout(r.live); r.live = null;
     r.ok = false;
     for (const p of r.waiting.values()) p.reject(new Error('Connexion interrompue'));
@@ -144,10 +147,36 @@
     for (const w of r.pending.filter((x) => x.action)){clearTimeout(w.timer);networkFailure('disconnected',w.label);w.reject(new Error('Connexion interrompue'));}
     r.pending = r.pending.filter((x) => !x.action);
     rebuild();
+    return true;
+  }
+  function lost(r, ws) {
+    if (!drop(r, ws)) return;
     setStatusSafe('reconnexion…', 'err');
-    const delay = Math.min(3000, 300 * Math.pow(2, r.retry++));
+    // 3 s au plus ; après plusieurs échecs d'affilée (serveur indisponible), 15 s.
+    const delay = Math.min(r.retry < 6 ? 3000 : 15000, 300 * Math.pow(2, r.retry++));
     r.reconnectTimer=setTimeout(() => {if(rooms.get(r.code)===r)connect(r.code);}, delay);
   }
+
+  // Veille demandée par le serveur (salle inactive 10 min) : pas de reconnexion automatique,
+  // la salle reprend au premier toucher, à une touche ou au retour sur l'onglet.
+  const SLEEP_TEXT = 'en veille · touche l’écran pour reprendre';
+  function sleep(r, ws) {
+    ws.onmessage = null; ws.onclose = null; ws.onerror = null;
+    try { ws.close(1000, 'veille'); } catch (_) {}
+    if (!drop(r, ws) && r.ws !== ws) return;
+    r.sleeping = true;
+    clearTimeout(r.reconnectTimer);
+    setStatusSafe(SLEEP_TEXT, 'err');
+  }
+  function wake(r) {
+    if (!r.sleeping || rooms.get(r.code) !== r) return;
+    r.sleeping = false; r.retry = 0;
+    setStatusSafe('reconnexion…', 'err');
+    connect(r.code);
+  }
+  const wakeAll = () => { for (const r of rooms.values()) if (r.sleeping) wake(r); };
+  window.addEventListener?.('pointerdown', wakeAll, true);
+  window.addEventListener?.('keydown', wakeAll, true);
 
   // Abandonne la prise courante sans attendre la fin du handshake de fermeture
   // (qui peut durer longtemps sur une connexion morte) et relance la reconnexion :
@@ -186,6 +215,7 @@
   function sendWrite(path, op, value) {
     const code = roomOf(path);
     if (!code) return Promise.reject(new Error('chemin invalide'));
+    if (rooms.get(code)?.sleeping) wake(rooms.get(code));
     const r = connect(code);
     const isAction = keysOf(path)[2] === 'actions';
     if(isAction&&r.loaded&&r.syncing)return Promise.reject(new Error('La partie se reconnecte. Réessaie dans un instant.'));
@@ -280,6 +310,7 @@
   };
   window.cloudHeartbeat = async function (room) {
     const r = rooms.get(String(room).toUpperCase());
+    if (r && r.sleeping) throw new Error(SLEEP_TEXT);
     if (!r || !r.ok) throw new Error('hors ligne');
     if(r.ws?.readyState===1)r.ws.send(JSON.stringify({t:'presence',active:isActive()}));
     return { seen: {} };

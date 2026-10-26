@@ -2250,7 +2250,7 @@ setInterval(async function(){
   if(!uid||!code)return;
   try{
     await cloudHeartbeat(code,uid);setStatus('connecté','ok');
-  }catch(e){setStatus('hors ligne · reprise automatique','err');}
+  }catch(e){setStatus(/veille/.test(e&&e.message||'')?e.message:'hors ligne · reprise automatique','err');}
 },1000);
 
 function exchangePrompt(selection){

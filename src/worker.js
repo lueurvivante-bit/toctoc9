@@ -45,12 +45,26 @@ export class Room extends DurableObject {
     this.flushTimer = null;
     this.saveTimer = null;
     this.tick = null;
+    // Salle sans action de joueur pendant ce délai : connexions fermées, salle en veille.
+    this.idleMs = Number(env.ROOM_IDLE_MS) || 10 * 60 * 1000;
+    this.lastActivity = Date.now();
+    this.asleep = false;
+    // Minuteurs du moteur suivis : une mise en veille les annule tous (aucun réveil fantôme).
+    this.timerGen = 0;
+    this.timers = new Set();
+    const engineSetTimeout = (fn, ms) => {
+      const gen = this.timerGen;
+      const id = setTimeout(() => { this.timers.delete(id); if (gen === this.timerGen) fn(); }, ms);
+      this.timers.add(id);
+      return id;
+    };
+    const engineClearTimeout = (id) => { clearTimeout(id); this.timers.delete(id); };
     this.store = new Store(() => this.changed());
-    this.runtime = createRuntime({ firebase: serverFirebase(this.store), setTimeout, clearTimeout });
+    this.runtime = createRuntime({ firebase: serverFirebase(this.store), setTimeout: engineSetTimeout, clearTimeout: engineClearTimeout });
     this.attached = false;
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.get('room');
-      if (saved) { this.store.tree = saved.tree || {}; this.tokens = saved.tokens || {}; this.code = saved.code || null; }
+      if (saved) { this.store.tree = saved.tree || {}; this.tokens = saved.tokens || {}; this.code = saved.code || null; if (saved.lastActivity) this.lastActivity = saved.lastActivity; }
     });
   }
 
@@ -101,6 +115,9 @@ export class Room extends DurableObject {
     if (this.tokens[uid] && this.tokens[uid] !== token) return this.send(conn, { t: 'error', reason: 'identité déjà utilisée' });
     this.tokens[uid] = token;
     conn.uid = uid;conn.active=m.active!==false;conn.aware=m.presence===true;
+    // Un joueur qui revient à l'écran réveille la salle ; un onglet masqué qui se reconnecte, non.
+    if (conn.active) this.markActive();
+    if (this.asleep && conn.active) { this.asleep = false; try { this.runtime.wake(); } catch (e) { console.error('wake', e); } }
     if(conn.active){this.seen[uid]=Date.now();delete this.inactiveSince[uid];}else{this.inactiveSince[uid]??=Date.now();}
     this.sockets.add(conn);
     this.startTick();
@@ -111,6 +128,7 @@ export class Room extends DurableObject {
 
   // ---------- Écritures autorisées des joueurs ----------
   clientWrite(conn, m) {
+    this.markActive();
     const uid = conn.uid, base = this.base(), path = String(m.path || '');
     let error = null;
     try {
@@ -190,6 +208,7 @@ export class Room extends DurableObject {
 
   // ---------- Réservation du pseudo et du personnage (reprise de cloud-services.js) ----------
   identity(conn, m) {
+    this.markActive();
     const uid = conn.uid, name = String(m.name || ''), avatar = m.avatar;
     const reply = (ok, extra) => { this.send(conn, Object.assign({ t: 'res', id: m.id, ok }, extra)); };
     const game = structuredClone(this.game());
@@ -258,8 +277,33 @@ export class Room extends DurableObject {
     if (this.saveTimer || !this.game().meta) return;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      this.ctx.storage.put('room', { tree: this.store.tree, tokens: this.tokens, code: this.code }).catch((e) => console.error('save', e));
+      this.save();
     }, 1000);
+  }
+
+  save() {
+    return this.ctx.storage.put('room', { tree: this.store.tree, tokens: this.tokens, code: this.code, lastActivity: this.lastActivity }).catch((e) => console.error('save', e));
+  }
+
+  // Seules les actions des joueurs comptent (écritures, identité, retour à l'écran) ;
+  // les battements de présence d'un onglet resté ouvert ne maintiennent pas la salle.
+  markActive() { this.lastActivity = Date.now(); }
+
+  // Veille : prévient les clients, ferme les connexions, annule tous les minuteurs et
+  // sauvegarde. Sans connexion ni minuteur, Cloudflare décharge la salle (plus de coût).
+  // La partie reprend telle quelle quand un joueur revient.
+  sleep() {
+    for (const c of this.sockets) { this.send(c, { t: 'sleep' }); try { c.ws.close(4001, 'veille'); } catch (e) { /* fermée */ } }
+    this.sockets.clear();
+    this.stopTick();
+    this.asleep = true;
+    this.timerGen++;
+    for (const id of this.timers) clearTimeout(id);
+    this.timers.clear();
+    try { this.runtime.sleep(); } catch (e) { console.error('sleep', e); }
+    if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
+    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+    if (this.game().meta) this.save();
   }
 
   // ---------- Présence : organisateur de secours, rendu au créateur à son retour ----------
@@ -271,6 +315,7 @@ export class Room extends DurableObject {
 
   presence() {
     const now = Date.now();
+    if (this.sockets.size && now - this.lastActivity >= this.idleMs) return this.sleep();
     for(const c of this.sockets)if(c.uid&&c.active&&!c.aware)this.seen[c.uid]=now;
     const active=new Set(Array.from(this.sockets).filter(c=>c.uid&&c.active&&(!c.aware||now-(this.seen[c.uid]||0)<3000)).map(c=>c.uid));
     const g = this.game(), meta = g.meta;
