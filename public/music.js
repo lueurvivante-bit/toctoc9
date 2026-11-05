@@ -19,31 +19,36 @@
     { label: 'Muet', gain: 0 }, { label: 'Murmure', gain: 0.015 }, { label: 'Très doux', gain: 0.04 },
     { label: 'Doux', gain: 0.06 }, { label: 'Moyen', gain: 0.1 }, { label: 'Fort', gain: 0.3 }, { label: 'Très fort', gain: 0.6 },
   ];
-  const MAX = 6, DEFAULT = 3, CAP = 4, FADE_MS = 2000, STOP_MS = 300, TOAST_MS = 3000;
+  const MAX = 6, DEFAULT = 2, CAP = 4, FADE_MS = 2000, STOP_MS = 300, TOAST_MS = 3000;
   const KEY = 'lueurvivante.ambient-music.v1';
 
-  // ---- Préférences (format version 2 de la Galaxie) ------------------------
+  // ---- Préférences (format version 3 de la Galaxie) ------------------------
   const isLevel = (v) => Number.isInteger(v) && v >= 0 && v <= MAX;
   function readPrefs() {
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { raw = null; }
     const v = raw && typeof raw === 'object' ? { ...raw } : {};
-    if (raw && v.version !== 2) {
+    if (raw && v.version !== 2 && v.version !== 3) {
       for (const k of ['level', 'lastAudibleLevel']) {
         const old = v[k];
         v[k] = Number.isInteger(old) && old >= 1 && old <= 5 ? old + 1 : old === 0 ? 0 : undefined;
       }
     }
+    // Plus de question : sans réponse, défauts ; ancien défaut Doux → Très doux ; Muet choisi conservé.
+    if (raw && v.version !== 3) {
+      if (v.consentAsked !== true) { v.level = undefined; v.lastAudibleLevel = undefined; }
+      for (const k of ['level', 'lastAudibleLevel']) if (v[k] === 3) v[k] = DEFAULT;
+    }
     const loud = v.loudUnlocked === true, cap = loud ? MAX : CAP;
     const level = isLevel(v.level) ? Math.min(v.level, cap) : DEFAULT;
     const last = isLevel(v.lastAudibleLevel) && v.lastAudibleLevel > 0 ? Math.min(v.lastAudibleLevel, cap) : DEFAULT;
-    return { version: 2, level, lastAudibleLevel: level > 0 ? level : last, loudUnlocked: loud, consentAsked: v.consentAsked === true };
+    return { version: 3, level, lastAudibleLevel: level > 0 ? level : last, loudUnlocked: loud };
   }
   let prefs = readPrefs();
   const cap = () => (prefs.loudUnlocked ? MAX : CAP);
   function savePrefs(next) {
     const level = Math.max(0, Math.min(cap(), next.level));
-    prefs = { ...prefs, ...next, level, consentAsked: true, lastAudibleLevel: level > 0 ? level : prefs.lastAudibleLevel };
+    prefs = { ...prefs, ...next, level, lastAudibleLevel: level > 0 ? level : prefs.lastAudibleLevel };
     try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) { /* réglage gardé pour la session */ }
     reconcile();
     render();
@@ -93,7 +98,7 @@
     };
     step();
   }
-  const wanted = () => prefs.consentAsked && prefs.level > 0 && !userPaused && document.visibilityState !== 'hidden';
+  const wanted = () => prefs.level > 0 && !userPaused && document.visibilityState !== 'hidden';
   function load(i) { index = i; loaded = true; audio.src = BASE + TRACKS[i].file; audio.load(); }
   function start(i, ms) {
     load(i); setGain(0); wantPlaying = true; playing = true; attempt();
@@ -134,15 +139,13 @@
   .musicpop .mbars{display:flex;align-items:flex-end;gap:3px;height:24px}.musicpop .mbars i{width:5px;border-radius:2px;background:var(--line)}
   .musicpop .mbars i.on{background:var(--brass-soft)}
   .musicpop.toast3{padding:6px 6px 6px 12px}
-  .musicask p{margin:4px 0 10px;color:var(--muted);line-height:1.4}.musicask .mrow{justify-content:flex-start}
-  .musicask button{border-color:var(--line);font-size:.85rem}
   @media(prefers-reduced-motion:reduce){.musicpop{transition:none}}`;
   const icon = (c) => c + '︎';
   let button = null, pop = null, panelOpen = false, toastVisible = false, toastTimer = 0;
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   function showToast() {
-    if (panelOpen || !prefs.consentAsked) return;
+    if (panelOpen) return;
     toastVisible = true; clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { toastVisible = false; render(); }, TOAST_MS);
     render();
@@ -173,11 +176,7 @@
     button.setAttribute('aria-label', panelOpen ? 'Fermer le panneau musique' : 'Ouvrir le panneau musique');
     const track = TRACKS[index];
     let html = '';
-    if (!prefs.consentAsked) {
-      html = `<div class="musicpop musicask" role="dialog" aria-label="Musique"><b>♪ Musique pendant le jeu ?</b>
-        <p>Une ambiance douce, sans paroles. Tu peux la couper à tout moment avec le bouton ♪.</p>
-        <div class="mrow"><button type="button" data-m="yes">Oui</button><button type="button" data-m="no">Non merci</button></div></div>`;
-    } else if (panelOpen) {
+    if (panelOpen) {
       html = `<div class="musicpop" role="dialog" aria-label="Panneau musique"><div class="mrow"><div class="mtitle"><b>${esc(track.title)}</b>
         <span>${muted ? 'Son coupé' : esc(track.artist)}</span></div>
         <button type="button" data-m="close" aria-label="Fermer le panneau musique">✕</button></div>${controlsHtml()}</div>`;
@@ -193,9 +192,7 @@
   }
 
   function act(m) {
-    if (m === 'yes') savePrefs({ level: prefs.level || DEFAULT });
-    else if (m === 'no') savePrefs({ level: 0 });
-    else if (m === 'close') { panelOpen = false; render(); }
+    if (m === 'close') { panelOpen = false; render(); }
     else if (m === 'hide') { toastVisible = false; clearTimeout(toastTimer); render(); }
     else if (m === 'prev') { change((index - 1 + TRACKS.length) % TRACKS.length); touchToast(); }
     else if (m === 'next') { change((index + 1) % TRACKS.length); touchToast(); }
@@ -212,7 +209,7 @@
     document.head.appendChild(style);
     button = document.createElement('button');
     button.type = 'button'; button.className = 'musicbtn'; button.textContent = '♪';
-    button.onclick = () => { if (!prefs.consentAsked) return; panelOpen = !panelOpen; toastVisible = false; render(); };
+    button.onclick = () => { panelOpen = !panelOpen; toastVisible = false; render(); };
     pop = document.createElement('div');
     pop.addEventListener('click', (e) => { const b = e.target.closest('button[data-m]'); if (b) act(b.dataset.m); });
     document.body.appendChild(button);

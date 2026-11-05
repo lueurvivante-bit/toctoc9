@@ -111,10 +111,10 @@ Décision de Jonathan : Toc Toc reçoit la musique de la Galaxie LueurVivante
 jeu n'est pas un travail. `public/music.js` est chargé avant le script principal
 et n'entre donc pas dans le moteur serveur de `build.mjs`. Bouton ♪ à côté du
 bouton des effets 🔊 ; panneau persistant (morceaux, pause, volume −/+, couper) ;
-bandeau de 3 s à chaque nouveau morceau ; question « Musique pendant le jeu ? » au
-premier passage. Paliers et réglage partagés avec la Galaxie (clé
-`lueurvivante.ambient-music.v1`, même origine) : Murmure 1,5 %, Très doux 4 %,
-Doux 6 % (défaut), Moyen 10 % (plafond). Pistes lues dans le bucket public
+bandeau de 3 s à chaque nouveau morceau. Aucune question : la musique démarre
+d'elle-même (au premier toucher si le navigateur bloque la lecture automatique). Paliers et réglage partagés avec la Galaxie (clé
+`lueurvivante.ambient-music.v1`, même origine) : Murmure 1,5 %, Très doux 4 %
+(défaut), Doux 6 %, Moyen 10 % (plafond). Pistes lues dans le bucket public
 Supabase `ambient-music`. Règles complètes : `docs/AMBIENT_MUSIC_SPEC.md` du
 dépôt Academy. Les effets sonores du jeu gardent leur propre bouton 🔊.
 
