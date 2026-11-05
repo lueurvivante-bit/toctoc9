@@ -107,7 +107,7 @@ repliées ne sont pas des commandes visibles. Aucun changement de règles.
 ### Fond sonore — 5 novembre 2026
 
 Décision de Jonathan : Toc Toc reçoit la musique de la Galaxie LueurVivante
-(Prod 2 et Prod 3, Yellow Fifteen, sans paroles), partout, partie comprise : un
+(Cybeer, Homeez et Spice girl, Yellow Fifteen, sans paroles), partout, partie comprise : un
 jeu n'est pas un travail. `public/music.js` est chargé avant le script principal
 et n'entre donc pas dans le moteur serveur de `build.mjs`. Bouton ♪ à côté du
 bouton des effets 🔊 ; panneau persistant (morceaux, pause, volume −/+, couper) ;
