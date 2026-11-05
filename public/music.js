@@ -11,8 +11,9 @@
 
   const BASE = 'https://lawjphlxxkgvvcvuzgki.supabase.co/storage/v1/object/public/ambient-music/';
   const TRACKS = [
-    { title: 'Prod 2', artist: 'Yellow Fifteen', file: 'prod-2.692d7cdc7e70.m4a' },
-    { title: 'Prod 3', artist: 'Yellow Fifteen', file: 'prod-3.0fcf5f2cc004.m4a' },
+    { title: 'Cybeer', artist: 'Yellow Fifteen', file: 'cybeer.86d2cfd1b976.m4a' },
+    { title: 'Homeez', artist: 'Yellow Fifteen', file: 'homeez.0fcf5f2cc004.m4a' },
+    { title: 'Spice girl', artist: 'Yellow Fifteen', file: 'spice-girl.692d7cdc7e70.m4a' },
   ];
   const LEVELS = [
     { label: 'Muet', gain: 0 }, { label: 'Murmure', gain: 0.015 }, { label: 'Très doux', gain: 0.04 },
@@ -157,7 +158,7 @@
         <button type="button" data-m="next" aria-label="Morceau suivant">${icon('⏭')}</button>
       </div><div class="mrow">
         <button type="button" data-m="down" aria-label="Baisser le son" ${muted || audible <= 1 ? 'disabled' : ''}>−</button>
-        <span class="mbars" role="img" aria-label="Volume ${esc(LEVELS[audible].label)}">${LEVELS.slice(1).map((_, i) =>
+        <span class="mbars" role="img" aria-label="Volume ${audible} sur ${LEVELS.length - 1}">${LEVELS.slice(1).map((_, i) =>
           `<i class="${!muted && i + 1 <= prefs.level ? 'on' : ''}" style="height:${9 + (i + 1) * 3}px;opacity:${i + 1 > cap() ? .3 : 1}"></i>`).join('')}</span>
         <button type="button" data-m="up" aria-label="Monter le son" ${muted || audible >= cap() ? 'disabled' : ''}>+</button>
         <button type="button" class="mcut" data-m="mute" role="switch" aria-checked="${!muted}">${muted ? 'Rétablir' : 'Couper'}</button>
@@ -178,7 +179,7 @@
         <div class="mrow"><button type="button" data-m="yes">Oui</button><button type="button" data-m="no">Non merci</button></div></div>`;
     } else if (panelOpen) {
       html = `<div class="musicpop" role="dialog" aria-label="Panneau musique"><div class="mrow"><div class="mtitle"><b>${esc(track.title)}</b>
-        <span>${muted ? 'Son coupé' : esc(track.artist) + ' · ' + esc(LEVELS[prefs.level].label)}</span></div>
+        <span>${muted ? 'Son coupé' : esc(track.artist)}</span></div>
         <button type="button" data-m="close" aria-label="Fermer le panneau musique">✕</button></div>${controlsHtml()}</div>`;
     } else if (toastVisible) {
       html = `<div class="musicpop toast3" aria-label="Musique : ${esc(track.title)}, ${esc(track.artist)}"><div class="mrow"><div class="mtitle"><b>♪ ${esc(track.title)}</b>
