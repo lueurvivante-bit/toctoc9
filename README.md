@@ -103,3 +103,22 @@ réglages, rejoindre, salle, mémorisation, résultat, fin), puis sélection ré
 d’une carte et contrôle du bouton actif/non recouvert à 360×570, dix joueurs.
 Les réglages restent défilants dans leur panneau ; les éléments des sections
 repliées ne sont pas des commandes visibles. Aucun changement de règles.
+
+### Fond sonore — 5 novembre 2026
+
+Décision de Jonathan : Toc Toc reçoit la musique de la Galaxie LueurVivante
+(Prod 2 et Prod 3, Yellow Fifteen, sans paroles), partout, partie comprise : un
+jeu n'est pas un travail. `public/music.js` est chargé avant le script principal
+et n'entre donc pas dans le moteur serveur de `build.mjs`. Bouton ♪ à côté du
+bouton des effets 🔊 ; panneau persistant (morceaux, pause, volume −/+, couper) ;
+bandeau de 3 s à chaque nouveau morceau ; question « Musique pendant le jeu ? » au
+premier passage. Paliers et réglage partagés avec la Galaxie (clé
+`lueurvivante.ambient-music.v1`, même origine) : Murmure 1,5 %, Très doux 4 %,
+Doux 6 % (défaut), Moyen 10 % (plafond). Pistes lues dans le bucket public
+Supabase `ambient-music`. Règles complètes : `docs/AMBIENT_MUSIC_SPEC.md` du
+dépôt Academy. Les effets sonores du jeu gardent leur propre bouton 🔊.
+
+Validation : `npm test` ; page servie localement, téléphone 375×812 : question,
+lecture réelle des pistes en ligne à 6 %, bandeau masqué à 3 s, panneau jusqu'à
+Murmure, couper/rétablir. Table de jeu en partie non parcourue en local (serveur
+de salle non lancé).
